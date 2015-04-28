@@ -72,11 +72,20 @@ bool Bundle::load_nvm(QTextStream& stream)
     stream >> radial_distortion;
     stream >> temp; // END of camera
 
-    m_Cameras[i].focial_length = focal_length;
-    m_Cameras[i]. // TODO
+    Camera& cam = m_Cameras[i];
+    cam.focial_length = focal_length;
+    cam.pixel_aspect_ratio = 1.0f;
+    cam.principal_point[0] = 0.5f; // TODO
+    cam.principal_point[1] = 0.5f; // TODO
+    cam.radial_distortion[0] = radial_distortion;
+    cam.radial_distortion[1] = 0.0f;
+
+    // TODO: extrinsic
   }
 
   stream >> num_points;
+
+  return true;
 }
 
 void Bundle::allocate_cameras(int n)

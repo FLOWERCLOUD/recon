@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Camera.h"
-#include <QVector>
+#include <QTextStream>
 
 namespace recon {
 
@@ -19,7 +19,7 @@ public:
 
 private:
   Bundle(const Bundle&) = delete;
-  void operator(const Bundle&) = delete;
+  void operator=(const Bundle&) = delete;
 
   void allocate_cameras(int n);
 

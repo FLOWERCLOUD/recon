@@ -1,41 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(ReconWorkspace)
 
-if(APPLE)
-  find_program(Homebrew brew
-    HINTS
-    /usr/local/bin
-    /opt/bin
-    /opt/local/bin
-  )
-  #message(STATUS ${Homebrew})
-  if(Homebrew)
-    execute_process(COMMAND ${Homebrew} --prefix qt5
-      OUTPUT_VARIABLE Qt5_DIR
-    )
-    string(STRIP ${Qt5_DIR} Qt5_DIR)
-    set(Qt5_DIR "${Qt5_DIR}/lib/cmake/Qt5")
-    #message(STATUS ${Qt5_DIR})
-  endif()
-elseif(MSVC)
-  set(QTDIR "QTDIR-NOTFOUND" CACHE PATH "Where is Qt5 (ex: C:/Qt/5.4/msvc2013_64)")
-  if(IS_DIRECTORY ${QTDIR})
-    message(STATUS "Use QTDIR=${QTDIR}")
-  else()
-    message(FATAL_ERROR "QTDIR must be defined")
-  endif()
-  set(CMAKE_PREFIX_PATH ${QTDIR})
-endif()
+include(qt5.cmake)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
+add_subdirectory(framework)
 
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
-
-#message(STATUS ${Qt5_DIR})
-#get_target_property(Qt5Core_Location Qt5::Core LOCATION)
-#message(STATUS ${Qt5Core_Location})
-
-add_executable(HelloWorld helloworld.cpp)
-target_link_libraries(HelloWorld PUBLIC Qt5::Core Qt5::Widgets)
+#add_executable(HelloWorld helloworld.cpp)
+#target_link_libraries(HelloWorld PUBLIC Qt5::Core Qt5::Widgets)
