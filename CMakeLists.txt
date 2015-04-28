@@ -5,5 +5,10 @@ include(qt5.cmake)
 
 add_subdirectory(framework)
 
-#add_executable(HelloWorld helloworld.cpp)
-#target_link_libraries(HelloWorld PUBLIC Qt5::Core Qt5::Widgets)
+add_executable(HelloWorld helloworld.cpp)
+target_link_libraries(HelloWorld
+  PUBLIC
+  ReconFramework
+  Qt5::Core
+  Qt5::Widgets
+)

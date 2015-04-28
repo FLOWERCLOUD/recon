@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Camera.h"
-#include <QTextStream>
+#include <QIODevice>
 
 namespace recon {
 
@@ -15,7 +15,7 @@ public:
 
   void clear();
 
-  bool load_nvm(QTextStream& stream);
+  bool load_nvm(QIODevice* io);
 
 private:
   Bundle(const Bundle&) = delete;

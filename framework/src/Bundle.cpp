@@ -36,9 +36,10 @@ void Bundle::clear()
   }
 }
 
-bool Bundle::load_nvm(QTextStream& stream)
+bool Bundle::load_nvm(QIODevice* io)
 {
   QString token;
+  QTextStream stream(io);
 
   // Magic
   stream >> token;
@@ -82,8 +83,10 @@ bool Bundle::load_nvm(QTextStream& stream)
 
     // TODO: extrinsic
   }
+  m_CamerasNum = num_cameras;
 
   stream >> num_points;
+  // TODO: features
 
   return true;
 }
