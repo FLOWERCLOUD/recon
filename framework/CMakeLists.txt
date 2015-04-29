@@ -1,9 +1,11 @@
 project(ReconFramework)
 
 set(headers include/Bundle.h
-            include/Camera.h)
+            include/Camera.h
+            include/OpenGLWindow.h)
 set(sources src/Bundle.cpp
-            src/Camera.cpp)
+            src/Camera.cpp
+            src/OpenGLWindow.cpp)
 
 add_library(ReconFramework ${sources} ${headers})
 
@@ -11,6 +13,7 @@ target_link_libraries(ReconFramework
   PUBLIC
   vectormath
   Qt5::Core
+  Qt5::Gui
 )
 
 target_compile_options(ReconFramework

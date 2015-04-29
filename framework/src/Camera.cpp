@@ -1,16 +1,20 @@
 #include "Camera.h"
+#include <vectormath.h>
 #include <QString>
 #include <QTextStream>
 
 namespace recon {
 
+using vectormath::aos::vec3;
+using vectormath::aos::vec4;
 using vectormath::aos::quat;
 using vectormath::aos::mat3;
-using vectormath::aos::vec3;
-using vectormath::aos::load_quat;
+using vectormath::aos::mat4;
 using vectormath::aos::load_vec3;
-using vectormath::aos::store_mat3;
 using vectormath::aos::store_vec3;
+using vectormath::aos::load_mat3;
+using vectormath::aos::store_mat3;
+using vectormath::aos::load_quat;
 
 void load_from_nvm(Camera& cam, QString& imagename, QTextStream& stream)
 {

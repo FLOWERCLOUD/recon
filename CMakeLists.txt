@@ -12,5 +12,5 @@ target_link_libraries(HelloWorld
   PUBLIC
   ReconFramework
   Qt5::Core
-  Qt5::Widgets
+  Qt5::Gui
 )
