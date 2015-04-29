@@ -1,5 +1,6 @@
 #include "Bundle.h"
-#include <assert.h>
+#include <QtGlobal>
+#include <QtDebug>
 #include <QTextStream>
 
 namespace recon {
@@ -21,7 +22,7 @@ int Bundle::camera_count() const
 
 Camera& Bundle::get_camera(int index)
 {
-  assert(index >= 0 && index < camera_count());
+  Q_ASSERT(index >= 0 && index < camera_count());
   return m_Cameras[index];
 }
 
@@ -56,6 +57,16 @@ bool Bundle::load_nvm(QIODevice* io)
   int num_cameras, num_points;
 
   num_cameras = token.toInt();
+  if (num_cameras <= 0) {
+    qWarning() << "Invalid number of cameras (value = "
+               << num_cameras << ")";
+    return false;
+  }
+  if (num_cameras > 10000) {
+    qWarning() << "The bundle has too many cameras";
+    return false;
+  }
+
   allocate_cameras(num_cameras);
 
   for (int i = 0; i < num_cameras; ++i) {
@@ -81,7 +92,14 @@ bool Bundle::load_nvm(QIODevice* io)
     cam.radial_distortion[0] = radial_distortion;
     cam.radial_distortion[1] = 0.0f;
 
-    // TODO: extrinsic
+    Quat q;
+    q.setX(orient[0]);
+    q.setY(orient[1]);
+    q.setZ(orient[2]);
+    q.setW(orient[3]);
+    set_orientation(cam, q);
+
+    set_position(cam, Vector3(center[0], center[1], center[2]));
   }
   m_CamerasNum = num_cameras;
 
@@ -97,10 +115,7 @@ void Bundle::allocate_cameras(int n)
     int cap = n;
 
     Camera* addr = (Camera*)malloc(sizeof(Camera) * cap);
-    if (!addr) {
-      // OUT OF MEMORY
-      abort();
-    }
+    Q_CHECK_PTR(addr);
 
     if (m_CamerasNum > 0) {
       Camera* src = m_Cameras;

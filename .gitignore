@@ -2,6 +2,9 @@
 /build
 /tmp
 
+# Ignore data files
+/data
+
 # Ignore system-generated files
 .DS_Store
 *.swp
