@@ -3,6 +3,8 @@ project(ReconWorkspace)
 
 include(qt5.cmake)
 
+add_subdirectory(gfxmath/simdmath)
+add_subdirectory(gfxmath/vectormath)
 add_subdirectory(framework)
 
 add_executable(HelloWorld helloworld.cpp)

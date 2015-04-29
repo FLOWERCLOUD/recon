@@ -1,10 +1,9 @@
 project(ReconFramework)
 
-add_subdirectory(sce_vectormath)
-
 set(headers include/Bundle.h
             include/Camera.h)
-set(sources src/Bundle.cpp)
+set(sources src/Bundle.cpp
+            src/Camera.cpp)
 
 add_library(ReconFramework ${sources} ${headers})
 

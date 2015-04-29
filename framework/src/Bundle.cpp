@@ -70,36 +70,10 @@ bool Bundle::load_nvm(QIODevice* io)
   allocate_cameras(num_cameras);
 
   for (int i = 0; i < num_cameras; ++i) {
-    QString filename;
-    float focal_length;
-    float orient[4]; // XYZW
-    float center[3];
-    float radial_distortion;
-    int temp;
-
-    stream >> filename;
-    stream >> focal_length;
-    stream >> orient[3] >> orient[0] >> orient[1] >> orient[2];
-    stream >> center[0] >> center[1] >> center[2];
-    stream >> radial_distortion;
-    stream >> temp; // END of camera
-
     Camera& cam = m_Cameras[i];
-    cam.focial_length = focal_length;
-    cam.pixel_aspect_ratio = 1.0f;
-    cam.principal_point[0] = 0.5f; // TODO
-    cam.principal_point[1] = 0.5f; // TODO
-    cam.radial_distortion[0] = radial_distortion;
-    cam.radial_distortion[1] = 0.0f;
-
-    Quat q;
-    q.setX(orient[0]);
-    q.setY(orient[1]);
-    q.setZ(orient[2]);
-    q.setW(orient[3]);
-    set_orientation(cam, q);
-
-    set_position(cam, Vector3(center[0], center[1], center[2]));
+    QString imagename;
+    load_from_nvm(cam, imagename, stream);
+    cam.index = i;
   }
   m_CamerasNum = num_cameras;
 
