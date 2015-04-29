@@ -2,6 +2,7 @@
 #include <vectormath.h>
 #include <QString>
 #include <QTextStream>
+#include <QDir>
 
 namespace recon {
 
@@ -35,15 +36,15 @@ void load_from_nvm(Camera& cam, QString& imagename, QTextStream& stream)
   cam.radial_distortion[0] = radial_distortion;
   cam.radial_distortion[1] = 0.0f;
 
-  cam.intrinsic[0] = focal_length;
+  cam.intrinsic[0] = focal_length / 4896.0f * 2.0f;
   cam.intrinsic[1] = 0.0f;
   cam.intrinsic[2] = 0.0f;
   cam.intrinsic[3] = 0.0f;
-  cam.intrinsic[4] = focal_length;
+  cam.intrinsic[4] = focal_length / 3264.0f * -2.0f;
   cam.intrinsic[5] = 0.0f;
   cam.intrinsic[6] = 0.0f;
   cam.intrinsic[7] = 0.0f;
-  cam.intrinsic[8] = focal_length;
+  cam.intrinsic[8] = 1.0f;
 
   memcpy(cam.center, center, sizeof(float)*3);
 

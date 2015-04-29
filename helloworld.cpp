@@ -4,6 +4,7 @@
 #include <QtDebug>
 #include <QGuiApplication>
 #include <QOpenGLShaderProgram>
+#include <QKeyEvent>
 
 class BundleWindow : public recon::OpenGLWindow {
 public:
@@ -12,7 +13,11 @@ public:
   void initialize() override;
   void render() override;
 
+protected:
+  virtual void keyPressEvent(QKeyEvent* event) override;
+
 private:
+  int m_CameraIndex;
   GLuint m_FeatureVBO;
   GLint m_ModelViewMatrixUniform;
   GLint m_CalibrationMatrixUniform;
@@ -23,6 +28,21 @@ private:
 
 BundleWindow::BundleWindow()
 {
+  m_CameraIndex = 0;
+}
+
+void BundleWindow::keyPressEvent(QKeyEvent* event)
+{
+  switch (event->key()) {
+    case Qt::Key_Right:
+      m_CameraIndex += 1;
+      renderLater();
+      break;
+    case Qt::Key_Left:
+      m_CameraIndex -= 1;
+      renderLater();
+      break;
+  }
 }
 
 void BundleWindow::initialize()
@@ -88,7 +108,11 @@ void BundleWindow::render()
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  const recon::Camera& cam = m_Bundle.get_camera(0);
+  while (m_CameraIndex < 0)
+    m_CameraIndex += m_Bundle.camera_count();
+  m_CameraIndex = m_CameraIndex % m_Bundle.camera_count();
+
+  const recon::Camera& cam = m_Bundle.get_camera(m_CameraIndex);
 
   m_Program->bind();
   {
