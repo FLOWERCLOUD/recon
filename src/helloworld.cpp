@@ -1,5 +1,5 @@
-#include <Bundle.h>
-#include <OpenGLWindow.h>
+#include <Recon/Bundle.h>
+#include "OpenGLWindow.h"
 #include <QtCore>
 #include <QtDebug>
 #include <QGuiApplication>
@@ -132,6 +132,8 @@ void BundleWindow::render()
     store_mat3((GLfloat*)buf, m1);
     m_Program->setUniformValue(m_CalibrationMatrixUniform, buf);
   }
+
+  glEnable(GL_PROGRAM_POINT_SIZE);
 
   glBindBuffer(GL_ARRAY_BUFFER, m_FeatureVBO);
   glEnableVertexAttribArray(0);

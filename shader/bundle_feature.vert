@@ -17,6 +17,7 @@ void main()
   pos /= pos.z;
 
   //gl_Position = in_Position;
+  gl_PointSize = 5.0;
   gl_Position = vec4(pos.xy, 1.0, 1.0);
   vs_Color = in_Color;
 }

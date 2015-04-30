@@ -6,11 +6,4 @@ include(qt5.cmake)
 add_subdirectory(gfxmath/simdmath)
 add_subdirectory(gfxmath/vectormath)
 add_subdirectory(framework)
-
-add_executable(HelloWorld helloworld.cpp)
-target_link_libraries(HelloWorld
-  PUBLIC
-  ReconFramework
-  Qt5::Core
-  Qt5::Gui
-)
+add_subdirectory(src)
