@@ -21,6 +21,10 @@ target_compile_options(Recon
   "-Wall"
 )
 
+target_compile_definitions(Recon
+  PUBLIC
+)
+
 target_include_directories(Recon
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

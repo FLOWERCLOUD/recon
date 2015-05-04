@@ -50,6 +50,8 @@ void BundleWindow::keyPressEvent(QKeyEvent* event)
 
 void BundleWindow::initialize()
 {
+  qDebug() << "CWD = " << QDir::currentPath();
+
   // Load bundle
   recon::NVMLoader("data/e100vs/bundle.nvm").load(&m_Document);
 
