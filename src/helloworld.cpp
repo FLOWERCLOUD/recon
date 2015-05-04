@@ -1,5 +1,7 @@
-#include <Recon/Bundle.h>
+#include <Recon/Document.h>
+#include <Recon/NVMLoader.h>
 #include "OpenGLWindow.h"
+
 #include <QtCore>
 #include <QtDebug>
 #include <QGuiApplication>
@@ -23,10 +25,11 @@ private:
   GLint m_CalibrationMatrixUniform;
 
   QOpenGLShaderProgram *m_Program;
-  recon::Bundle m_Bundle;
+  recon::Document m_Document;
 };
 
 BundleWindow::BundleWindow()
+: m_Document("data/e100vs/workspace")
 {
   m_CameraIndex = 0;
 }
@@ -48,14 +51,12 @@ void BundleWindow::keyPressEvent(QKeyEvent* event)
 void BundleWindow::initialize()
 {
   // Load bundle
-  {
-    QFile file("data/e100vs/bundle.nvm");
-    file.open(QIODevice::ReadOnly);
-    m_Bundle.load_nvm(&file);
-    file.close();
-  }
-  qDebug() << m_Bundle.camera_count() << " cameras";
-  qDebug() << m_Bundle.feature_count() << " points";
+  recon::NVMLoader("data/e100vs/bundle.nvm").load(&m_Document);
+
+  const QVector<recon::Camera>& cameras = m_Document.cameras();
+  const QVector<recon::Feature>& features = m_Document.features();
+  qDebug() << cameras.size() << " cameras";
+  qDebug() << features.size() << " points";
 
   const char* version = (const char*) glGetString(GL_VERSION);
   qDebug() << "OpenGL Version = " << version;
@@ -63,7 +64,7 @@ void BundleWindow::initialize()
   // Copy to vertex buffer
   glGenBuffers(1, &m_FeatureVBO);
   glBindBuffer(GL_ARRAY_BUFFER, m_FeatureVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(recon::FeatureVertex) * m_Bundle.feature_count(), m_Bundle.get_features(), GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(recon::Feature) * features.size(), features.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // Load Shader
@@ -108,11 +109,14 @@ void BundleWindow::render()
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  while (m_CameraIndex < 0)
-    m_CameraIndex += m_Bundle.camera_count();
-  m_CameraIndex = m_CameraIndex % m_Bundle.camera_count();
+  const QVector<recon::Camera>& cameras = m_Document.cameras();
+  const QVector<recon::Feature>& features = m_Document.features();
 
-  const recon::Camera& cam = m_Bundle.get_camera(m_CameraIndex);
+  while (m_CameraIndex < 0)
+    m_CameraIndex += cameras.size();
+  m_CameraIndex = m_CameraIndex % cameras.size();
+
+  const recon::Camera& cam = cameras[m_CameraIndex];
 
   m_Program->bind();
   {
@@ -138,9 +142,9 @@ void BundleWindow::render()
   glBindBuffer(GL_ARRAY_BUFFER, m_FeatureVBO);
   glEnableVertexAttribArray(0);
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(recon::FeatureVertex), (void*)offsetof(recon::FeatureVertex, pos));
-  glVertexAttribPointer(1, 3, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(recon::FeatureVertex), (void*)offsetof(recon::FeatureVertex, color));
-  glDrawArrays(GL_POINTS, 0, m_Bundle.feature_count());
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(recon::Feature), (void*)offsetof(recon::Feature, pos));
+  glVertexAttribPointer(1, 3, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(recon::Feature), (void*)offsetof(recon::Feature, color));
+  glDrawArrays(GL_POINTS, 0, features.size());
 
   glDisableVertexAttribArray(0);
   glDisableVertexAttribArray(1);

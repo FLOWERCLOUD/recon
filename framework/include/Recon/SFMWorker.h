@@ -14,8 +14,8 @@ public:
 
   void start();
 
-private slots:
-  void jobFinished(int code, QProcess::ExitStatus status);
+//private slots:
+  //void jobFinished(int code, QProcess::ExitStatus status);
 
 private:
   QString m_WorkPath;
