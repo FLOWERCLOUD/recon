@@ -51,9 +51,12 @@ void BundleWindow::keyPressEvent(QKeyEvent* event)
 void BundleWindow::initialize()
 {
   qDebug() << "CWD = " << QDir::currentPath();
+  qDebug() << "DOC BASEPATH = " << m_Document.basePath();
 
   // Load bundle
   recon::NVMLoader("data/e100vs/bundle.nvm").load(&m_Document);
+
+  m_Document.save();
 
   const QVector<recon::Camera>& cameras = m_Document.cameras();
   const QVector<recon::Feature>& features = m_Document.features();
