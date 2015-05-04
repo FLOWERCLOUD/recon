@@ -1,9 +1,15 @@
 project(ReconFramework)
 
 set(headers include/Recon/Bundle.h
-            include/Recon/Camera.h)
+            include/Recon/Camera.h
+            include/Recon/Document.h
+            include/Recon/NVMLoader.h
+            include/Recon/SFMWorker.h)
 set(sources src/Bundle.cpp
-            src/Camera.cpp)
+            src/Camera.cpp
+            src/Document.cpp
+            src/NVMLoader.cpp
+            src/SFMWorker.cpp)
 
 add_library(Recon ${sources} ${headers})
 
