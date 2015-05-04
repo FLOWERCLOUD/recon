@@ -1,6 +1,10 @@
 project(ReconSrc)
 
-add_executable(HelloWorld helloworld.cpp OpenGLWindow.cpp)
+set(headers OpenGLWindow.h)
+set(sources helloworld.cpp
+            OpenGLWindow.cpp)
+
+add_executable(HelloWorld ${sources} ${headers})
 target_link_libraries(HelloWorld
   PUBLIC
   Recon
