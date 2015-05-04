@@ -1,5 +1,6 @@
 #include <Recon/Document.h>
 #include <Recon/NVMLoader.h>
+#include <Recon/SFMWorker.h>
 #include "OpenGLWindow.h"
 
 #include <QtCore>
@@ -32,6 +33,9 @@ BundleWindow::BundleWindow()
 : m_Document("data/e100vs/workspace")
 {
   m_CameraIndex = 0;
+
+  recon::SFMWorker* sfmworker = new recon::SFMWorker(&document);
+  sfmworker.start();
 }
 
 void BundleWindow::keyPressEvent(QKeyEvent* event)
@@ -55,7 +59,6 @@ void BundleWindow::initialize()
 
   // Load bundle
   recon::NVMLoader("data/e100vs/bundle.nvm").load(&m_Document);
-
   m_Document.save();
 
   const QVector<recon::Camera>& cameras = m_Document.cameras();
@@ -178,4 +181,6 @@ int main(int argc, char* argv[])
   window.show();
 
   return app.exec();
+
+  return 0;
 }

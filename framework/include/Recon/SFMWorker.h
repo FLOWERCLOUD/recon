@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QProcess>
+#include <QTemporaryDir>
 
 namespace recon {
 
@@ -11,17 +12,18 @@ class SFMWorker : public QObject {
   Q_OBJECT
 public:
   SFMWorker(Document* doc, QObject* parent = 0);
+  ~SFMWorker();
 
   void start();
 
-//private slots:
-  //void jobFinished(int code, QProcess::ExitStatus status);
+private slots:
+  void jobFinished(int code, QProcess::ExitStatus status);
 
 private:
-  QString m_WorkPath;
-  QString m_ResultFile;
+  Document* m_Document;
   QProcess m_Process;
 
+  QTemporaryDir m_TempDir;
 };
 
 }
