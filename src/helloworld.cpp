@@ -34,8 +34,8 @@ BundleWindow::BundleWindow()
 {
   m_CameraIndex = 0;
 
-  recon::SFMWorker* sfmworker = new recon::SFMWorker(&document);
-  sfmworker.start();
+  //recon::SFMWorker* sfmworker = new recon::SFMWorker(&document);
+  //sfmworker.start();
 }
 
 void BundleWindow::keyPressEvent(QKeyEvent* event)
@@ -56,6 +56,7 @@ void BundleWindow::initialize()
 {
   qDebug() << "CWD = " << QDir::currentPath();
   qDebug() << "DOC BASEPATH = " << m_Document.basePath();
+  qDebug() << "width = " << width() << ", height = " << height();
 
   // Load bundle
   recon::NVMLoader("data/e100vs/bundle.nvm").load(&m_Document);
@@ -114,7 +115,7 @@ void BundleWindow::render()
   using vectormath::aos::store_mat3;
   using vectormath::aos::store_mat4;
 
-  glViewport(0, 0, width(), height());
+  //glViewport(0, 0, width(), height());
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

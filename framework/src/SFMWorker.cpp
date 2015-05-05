@@ -1,5 +1,7 @@
 #include <Recon/SFMWorker.h>
+#include <Recon/Document.h>
 #include <Recon/NVMLoader.h>
+#include <QDir>
 
 namespace recon {
 
@@ -12,31 +14,36 @@ SFMWorker::SFMWorker(Document* doc, QObject* parent)
 
   args << "sfm+shared+sort";
   args << doc_dir.absoluteFilePath("images");
-  args << m_TempDir.absoluteFilePath("bundle.nvm");
+  args << QDir(m_TempDir.path()).absoluteFilePath("bundle.nvm");
 
+#if defined(_WIN32) || defined(_WIN64)
   env.insert("PATH", "C:\\Program Files\\VisualSFM\\VisualSFM CUDA");
+#endif
 
-  m_Process.setProgram("VisualSFM");
-  m_Process.setArguments(args);
-  m_Process.setProcessEnvironment(env);
+  m_Process = new QProcess(this);
+  m_Process->setProgram("VisualSFM");
+  m_Process->setArguments(args);
+  m_Process->setProcessEnvironment(env);
 
-  connect(&m_Process, &QProcess::finished, this, &jobFinished);
+  connect(m_Process, (void (QProcess::*)(int,QProcess::ExitStatus))&QProcess::finished,
+          this, &SFMWorker::jobFinished);
 }
 
 SFMWorker::~SFMWorker()
 {
-  disconnect(&m_Process, &QProcess::finished, this, &jobFinished);
+  //disconnect(&m_Process, &QProcess::finished, this, &SFMWorker::jobFinished);
 }
 
 void SFMWorker::start()
 {
-  m_Process.start();
+  m_Process->start();
 }
 
 void SFMWorker::jobFinished(int code, QProcess::ExitStatus status)
 {
   if (status == QProcess::NormalExit) {
-    NVMLoader(m_TempDir.absoluteFilePath("bundle.nvm")).load(m_Document);
+    QString path = QDir(m_TempDir.path()).absoluteFilePath("bundle.nvm");
+    NVMLoader(path).load(m_Document);
   }
 
   this->deleteLater();

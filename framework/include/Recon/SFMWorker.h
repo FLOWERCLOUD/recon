@@ -21,7 +21,7 @@ private slots:
 
 private:
   Document* m_Document;
-  QProcess m_Process;
+  QProcess* m_Process;
 
   QTemporaryDir m_TempDir;
 };
