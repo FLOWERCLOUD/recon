@@ -1,4 +1,4 @@
-project(ReconFramework)
+project(ReconCore)
 
 set(headers include/Recon/Document.h
             include/Recon/NVMLoader.h
@@ -7,25 +7,25 @@ set(sources src/Document.cpp
             src/NVMLoader.cpp
             src/SFMWorker.cpp)
 
-add_library(Recon ${sources} ${headers})
+add_library(ReconCore ${sources} ${headers})
 
-target_link_libraries(Recon
+target_link_libraries(ReconCore
   PUBLIC
   vectormath
   Qt5::Core
 )
 
-target_compile_options(Recon
+target_compile_options(ReconCore
   PUBLIC
   "-std=c++11"
   "-Wall"
 )
 
-target_compile_definitions(Recon
+target_compile_definitions(ReconCore
   PUBLIC
 )
 
-target_include_directories(Recon
+target_include_directories(ReconCore
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>

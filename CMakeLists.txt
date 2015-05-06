@@ -5,5 +5,5 @@ include(qt5.cmake)
 
 add_subdirectory(gfxmath/simdmath)
 add_subdirectory(gfxmath/vectormath)
-add_subdirectory(framework)
-add_subdirectory(src)
+add_subdirectory(core)
+add_subdirectory(app)
