@@ -1,4 +1,5 @@
 import QtQuick 2.2
+import recon 1.0
 
 Rectangle {
   id: root
@@ -24,14 +25,14 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 2
         asynchronous: true
-        cache: true
+        cache: false
         fillMode: Image.PreserveAspectFit
         source: sourcePath
       }
     }
   }
 
-  ListModel {
+  ImageListModel {
     id: imageListModel
   }
 
@@ -53,8 +54,7 @@ Rectangle {
         if (drop.hasUrls) {
           drop.urls.forEach(function(url, index, array){
             if (/\.jpg$/i.test(url.toString())) {
-              var data = { 'sourcePath': url };
-              imageListModel.append(data);
+              imageListModel.addImageSource(url);
             }
           })
           drop.accept(Qt.CopyAction);
