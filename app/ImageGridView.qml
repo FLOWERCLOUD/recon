@@ -6,8 +6,22 @@ Rectangle {
 
   property real cellWidth: 100
   property real cellHeight: 100
-  readonly property int imageCount: root.model.count
-  property ImageListModel model: ImageListModel {}
+  readonly property int imageCount: root.document.imageCount
+  //property ImageListModel model: ImageListModel {}
+
+  property ReconDocument document: ReconDocument {
+    baseUrl: "file:tmp"
+
+    onImageAdded: {
+      console.log("image added: " + url);
+      var data = { 'sourcePath': url.toString() };
+      imageListModel.append(data);
+    }
+  }
+
+  ListModel {
+    id: imageListModel
+  }
 
   Component {
     id: imageCellDelegate
@@ -35,7 +49,7 @@ Rectangle {
     }
     cellWidth: root.cellWidth
     cellHeight: root.cellHeight
-    model: root.model
+    model: imageListModel
     delegate: imageCellDelegate
 
     DropArea {
@@ -43,12 +57,17 @@ Rectangle {
 
       onDropped: {
         if (drop.hasUrls) {
+          var flag = false;
+
           drop.urls.forEach(function(url, index, array){
-            if (/\.jpg$/i.test(url.toString())) {
-              root.model.addImageSource(url);
+            if (root.document.importImage(url)) {
+              flag = true;
             }
           })
-          drop.accept(Qt.CopyAction);
+
+          if (flag) {
+            drop.accept(Qt.CopyAction);
+          }
         }
         exited();
       }

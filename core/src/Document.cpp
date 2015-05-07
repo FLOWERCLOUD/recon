@@ -3,21 +3,24 @@
 #include <QFile>
 #include <QUuid>
 #include <QTextStream>
+//#include <QtDebug>
 
 namespace recon {
 
 Document::Document(QObject* parent)
 : QObject(parent)
 {
+  //qDebug("Document is created");
 }
 
 Document::~Document()
 {
+  //qDebug("Document is destroyed");
 }
 
 bool Document::isValid() const
 {
-  return !m_BaseUrl.isValid();
+  return m_BaseUrl.isValid();
 }
 
 QUrl Document::baseUrl() const
@@ -27,13 +30,16 @@ QUrl Document::baseUrl() const
 
 QString Document::basePath() const
 {
-  return baseUrl().toLocalFile();
+  return baseUrl().path();
 }
 
 void Document::setBaseUrl(const QUrl& url)
 {
   if (m_BaseUrl.isValid())
     return;
+
+  //qDebug() << url.toLocalFile() << ", " << url.toString();
+  //qDebug() << QUrl::fromLocalFile("tmp");
 
   if (url.isValid() && url.isLocalFile()) {
     QDir dir(url.toLocalFile());
@@ -79,10 +85,7 @@ QList<QString> Document::imageNames() const
 
 bool Document::importImage(const QUrl& url)
 {
-  if (!isValid())
-    return false;
-
-  if (!url.isValid() || !url.isLocalFile())
+  if (!isValid() || !url.isLocalFile())
     return false;
 
   if (!url.toString().endsWith(".jpg", Qt::CaseInsensitive))
@@ -96,15 +99,16 @@ bool Document::importImage(const QUrl& url)
   do {
     uuid = QUuid::createUuid();
     name = QString("%1-.jpg").arg(uuid.toString());
-  } while (!dir.exists(name));
+  } while (dir.exists(name));
 
   QUrl newurl = QUrl::fromLocalFile(dir.absoluteFilePath(name));
 
-  if (QFile::copy(url.toLocalFile(), newurl.toString())) {
+  if (QFile::copy(url.toLocalFile(), newurl.toLocalFile())) {
     m_ImageNames << name;
     m_ImageUrls << newurl;
     emit imageAdded(newurl, name);
-    emit imageUrlsChanged(m_ImageUrls);
+    //emit imageUrlsChanged(m_ImageUrls);
+    emit imageCountChanged(m_ImageNames.size());
     return true;
   }
 

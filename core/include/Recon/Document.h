@@ -30,6 +30,7 @@ struct Feature {
 class Document : public QObject {
   Q_OBJECT
   Q_PROPERTY(QUrl baseUrl READ baseUrl WRITE setBaseUrl NOTIFY baseUrlChanged)
+  Q_PROPERTY(int imageCount READ imageCount NOTIFY imageCountChanged)
   //Q_PROPERTY(QList imageUrls READ imageUrls NOTIFY imageUrlsChanged)
 public:
   Document(QObject* parent = 0);
@@ -48,7 +49,7 @@ public:
   QList<QUrl> imageUrls() const;
   QList<QString> imageNames() const;
 
-  bool importImage(const QUrl& url);
+  Q_INVOKABLE bool importImage(const QUrl& url);
 
   void reload();
   void save();
@@ -57,6 +58,7 @@ signals:
   void baseUrlChanged(QUrl url);
   void imageAdded(QUrl url, QString name);
   void imageUrlsChanged(QList<QUrl> urls);
+  void imageCountChanged(int count);
 
 private:
   friend class NVMLoader;
