@@ -6,13 +6,8 @@ Rectangle {
 
   property real cellWidth: 100
   property real cellHeight: 100
-  readonly property int imageCount: {
-    if (gridview.model) {
-      gridview.model.count;
-    } else {
-      0;
-    }
-  }
+  readonly property int imageCount: root.model.count
+  property ImageListModel model: ImageListModel {}
 
   Component {
     id: imageCellDelegate
@@ -32,19 +27,15 @@ Rectangle {
     }
   }
 
-  ImageListModel {
-    id: imageListModel
-  }
-
   GridView {
     id: gridview
     anchors {
       fill: parent
       margins: 5
     }
-    cellWidth: parent.cellWidth
-    cellHeight: parent.cellHeight
-    model: imageListModel
+    cellWidth: root.cellWidth
+    cellHeight: root.cellHeight
+    model: root.model
     delegate: imageCellDelegate
 
     DropArea {
@@ -54,7 +45,7 @@ Rectangle {
         if (drop.hasUrls) {
           drop.urls.forEach(function(url, index, array){
             if (/\.jpg$/i.test(url.toString())) {
-              imageListModel.addImageSource(url);
+              root.model.addImageSource(url);
             }
           })
           drop.accept(Qt.CopyAction);
