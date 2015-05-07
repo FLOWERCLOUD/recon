@@ -1,9 +1,17 @@
 import QtQuick 2.2
 
-Item {
-  //anchors.fill: parent
-  clip: true
-  anchors.margins: 5
+Rectangle {
+  id: root
+
+  property real cellWidth: 100
+  property real cellHeight: 100
+  readonly property int imageCount: {
+    if (gridview.model) {
+      gridview.model.count;
+    } else {
+      0;
+    }
+  }
 
   Component {
     id: imageCellDelegate
@@ -29,9 +37,12 @@ Item {
 
   GridView {
     id: gridview
-    anchors { fill: parent }
-    cellWidth: 100
-    cellHeight: 100
+    anchors {
+      fill: parent
+      margins: 5
+    }
+    cellWidth: parent.cellWidth
+    cellHeight: parent.cellHeight
     model: imageListModel
     delegate: imageCellDelegate
 
@@ -52,33 +63,23 @@ Item {
       }
 
       onEntered: {
-        //console.log("entered");
-        //frontLayer.border.width = 10;
+        root.border.width = 5;
       }
 
       onExited: {
-        //console.log("exited");
-        //frontLayer.border.width = 0;
+        root.border.width = 0;
       }
     }
   }
 
-  /*
-  Rectangle {
-    id: frontLayer
-    anchors.fill:parent
+  clip: true
+  border {
+    width: 0
+    color: "blue"
+  }
 
-    color: "transparent"
-
-    border {
-      width: 0
-      color: "blue"
+  Behavior on border.width {
+    PropertyAnimation {
     }
-
-    Behavior on border.width {
-      PropertyAnimation {
-        duration: 500
-      }
-    }
-  }*/
+  }
 }
