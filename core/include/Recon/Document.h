@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVector>
 #include <QString>
+#include <QUrl>
 #include <stdint.h>
 
 namespace recon {
@@ -28,23 +29,34 @@ struct Feature {
 
 class Document : public QObject {
   Q_OBJECT
+  Q_PROPERTY(QUrl baseUrl READ baseUrl WRITE setBaseUrl NOTIFY baseUrlChanged)
+  //Q_PROPERTY(QList imageUrls READ imageUrls NOTIFY imageUrlsChanged)
 public:
-  Document(const QString& basepath, QObject* parent = 0);
+  Document(QObject* parent = 0);
   ~Document();
 
-  const QString& basePath() const;
+  bool isValid() const;
+
+  QUrl baseUrl() const;
+  void setBaseUrl(const QUrl& url);
+  QString basePath() const;
 
   const QVector<Camera>& cameras() const;
   const QVector<Feature>& features() const;
 
-  //int numberOfImages() const;
-  // getImage()
+  int imageCount() const;
+  QList<QUrl> imageUrls() const;
+  QList<QString> imageNames() const;
 
-  //void importImage(const char* path);
-  //void importImage(const QString& path);
+  bool importImage(const QUrl& url);
 
   void reload();
   void save();
+
+signals:
+  void baseUrlChanged(QUrl url);
+  void imageAdded(QUrl url, QString name);
+  void imageUrlsChanged(QList<QUrl> urls);
 
 private:
   friend class NVMLoader;
@@ -52,9 +64,13 @@ private:
   void swapFeatures(QVector<Feature>& v);
 
 private:
-  QString m_BasePath;
+  QUrl m_BaseUrl;
+
   QVector<Camera> m_Cameras;
   QVector<Feature> m_Features;
+
+  QList<QString> m_ImageNames;
+  QList<QUrl> m_ImageUrls;
 };
 
 }

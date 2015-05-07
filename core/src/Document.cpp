@@ -1,13 +1,13 @@
 #include <Recon/Document.h>
 #include <QDir>
 #include <QFile>
+#include <QUuid>
 #include <QTextStream>
 
 namespace recon {
 
-Document::Document(const QString& basepath, QObject* parent)
+Document::Document(QObject* parent)
 : QObject(parent)
-, m_BasePath(QDir::isAbsolutePath(basepath) ? basepath : QDir(basepath).absolutePath())
 {
 }
 
@@ -15,9 +15,39 @@ Document::~Document()
 {
 }
 
-const QString& Document::basePath() const
+bool Document::isValid() const
 {
-  return m_BasePath;
+  return !m_BaseUrl.isValid();
+}
+
+QUrl Document::baseUrl() const
+{
+  return m_BaseUrl;
+}
+
+QString Document::basePath() const
+{
+  return baseUrl().toLocalFile();
+}
+
+void Document::setBaseUrl(const QUrl& url)
+{
+  if (m_BaseUrl.isValid())
+    return;
+
+  if (url.isValid() && url.isLocalFile()) {
+    QDir dir(url.toLocalFile());
+    dir.makeAbsolute();
+
+    if (!dir.exists()) {
+      if (!dir.mkpath("images")) {
+        return;
+      }
+    }
+
+    m_BaseUrl = QUrl::fromLocalFile(dir.path());
+    emit baseUrlChanged(m_BaseUrl);
+  }
 }
 
 const QVector<Camera>& Document::cameras() const
@@ -32,13 +62,58 @@ const QVector<Feature>& Document::features() const
   return m_Features;
 }
 
-void Document::reload()
+int Document::imageCount() const
 {
-  // TODO: clear cache
+  return m_ImageNames.size();
+}
+
+QList<QUrl> Document::imageUrls() const
+{
+  return m_ImageUrls;
+}
+
+QList<QString> Document::imageNames() const
+{
+  return m_ImageNames;
+}
+
+bool Document::importImage(const QUrl& url)
+{
+  if (!isValid())
+    return false;
+
+  if (!url.isValid() || !url.isLocalFile())
+    return false;
+
+  if (!url.toString().endsWith(".jpg", Qt::CaseInsensitive))
+    return false;
 
   QDir dir(basePath());
-  if (dir.exists()) {
+  dir.cd("images");
+
+  QUuid uuid;
+  QString name;
+  do {
+    uuid = QUuid::createUuid();
+    name = QString("%1-.jpg").arg(uuid.toString());
+  } while (!dir.exists(name));
+
+  QUrl newurl = QUrl::fromLocalFile(dir.absoluteFilePath(name));
+
+  if (QFile::copy(url.toLocalFile(), newurl.toString())) {
+    m_ImageNames << name;
+    m_ImageUrls << newurl;
+    emit imageAdded(newurl, name);
+    emit imageUrlsChanged(m_ImageUrls);
+    return true;
   }
+
+  return false;
+}
+
+/*
+void Document::reload()
+{
 }
 
 void Document::save()
@@ -92,7 +167,7 @@ void Document::save()
 
     file.close();
   }
-}
+}*/
 
 void Document::swapCameras(QVector<Camera>& v)
 {
