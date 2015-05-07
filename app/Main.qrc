@@ -1,6 +1,9 @@
 <RCC>
   <qresource prefix="/">
     <file>MainWindow.qml</file>
+    <file>MainView.qml</file>
+    <file>ImportImagePage.qml</file>
+    <file>CameraCalibrationPage.qml</file>
     <file>ImageGridView.qml</file>
   </qresource>
 </RCC>

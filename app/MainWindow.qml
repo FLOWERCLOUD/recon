@@ -2,6 +2,7 @@ import QtQuick 2.2
 import QtQuick.Controls 1.1
 
 ApplicationWindow {
+  id: mainWindow
   visible: true
   width: 800
   height: 600
@@ -22,20 +23,7 @@ ApplicationWindow {
     }
   }
 
-  ImageGridView {
-    //anchors.fill: undefined
-    anchors.top: parent.top
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.bottom: nextButton.top
-  }
-
-  Button {
-    id: nextButton
-    text: "Next"
-    anchors {
-      right: parent.right
-      bottom: parent.bottom
-    }
+  MainView {
+    id: contentView
   }
 }
