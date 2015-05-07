@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/">
+    <file>MainWindow.qml</file>
+    <file>ImageGridView.qml</file>
+  </qresource>
+</RCC>
