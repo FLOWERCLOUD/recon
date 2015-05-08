@@ -11,6 +11,10 @@ Rectangle {
 
   property ReconDocument document: ReconDocument {
     baseUrl: "file:tmp"
+  }
+
+  Connections {
+    target: root.document
 
     onImageAdded: {
       console.log("image added: " + url);

@@ -98,7 +98,7 @@ bool Document::importImage(const QUrl& url)
   QString name;
   do {
     uuid = QUuid::createUuid();
-    name = QString("%1-.jpg").arg(uuid.toString());
+    name = QString("%1.jpg").arg(uuid.toString());
   } while (dir.exists(name));
 
   QUrl newurl = QUrl::fromLocalFile(dir.absoluteFilePath(name));

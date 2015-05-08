@@ -57,7 +57,7 @@ public:
 signals:
   void baseUrlChanged(QUrl url);
   void imageAdded(QUrl url, QString name);
-  void imageUrlsChanged(QList<QUrl> urls);
+  //void imageUrlsChanged(QList<QUrl> urls);
   void imageCountChanged(int count);
 
 private:
