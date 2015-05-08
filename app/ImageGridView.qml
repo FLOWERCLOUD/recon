@@ -31,8 +31,8 @@ Rectangle {
     id: imageCellDelegate
 
     Item {
-      width: gridview.cellWidth;
-      height: gridview.cellHeight;
+      width: gridview.cellWidth
+      height: gridview.cellHeight
 
       Image {
         anchors.fill: parent
@@ -40,7 +40,7 @@ Rectangle {
         asynchronous: true
         cache: false
         fillMode: Image.PreserveAspectFit
-        source: sourcePath
+        source: model.sourcePath
       }
     }
   }

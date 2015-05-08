@@ -11,6 +11,14 @@ Document::Document(QObject* parent)
 : QObject(parent)
 {
   //qDebug("Document is created");
+
+  connect(this, &Document::baseUrlChanged,
+          this, &Document::onBaseUrlChanged,
+          Qt::DirectConnection);
+
+  connect(this, &Document::imageAdded,
+          this, &Document::onImageAdded,
+          Qt::DirectConnection);
 }
 
 Document::~Document()
@@ -30,7 +38,7 @@ QUrl Document::baseUrl() const
 
 QString Document::basePath() const
 {
-  return baseUrl().path();
+  return baseUrl().toLocalFile();
 }
 
 void Document::setBaseUrl(const QUrl& url)
@@ -70,17 +78,12 @@ const QVector<Feature>& Document::features() const
 
 int Document::imageCount() const
 {
-  return m_ImageNames.size();
+  return m_ImageUrls.size();
 }
 
 QList<QUrl> Document::imageUrls() const
 {
   return m_ImageUrls;
-}
-
-QList<QString> Document::imageNames() const
-{
-  return m_ImageNames;
 }
 
 bool Document::importImage(const QUrl& url)
@@ -104,15 +107,23 @@ bool Document::importImage(const QUrl& url)
   QUrl newurl = QUrl::fromLocalFile(dir.absoluteFilePath(name));
 
   if (QFile::copy(url.toLocalFile(), newurl.toLocalFile())) {
-    m_ImageNames << name;
     m_ImageUrls << newurl;
-    emit imageAdded(newurl, name);
-    //emit imageUrlsChanged(m_ImageUrls);
-    emit imageCountChanged(m_ImageNames.size());
+    emit imageAdded(newurl);
     return true;
   }
 
   return false;
+}
+
+void Document::onBaseUrlChanged(QUrl url)
+{
+  emit basePathChanged(url.toLocalFile());
+}
+
+void Document::onImageAdded(QUrl url)
+{
+  emit imageUrlsChanged(m_ImageUrls);
+  emit imageCountChanged(m_ImageUrls.size());
 }
 
 /*
