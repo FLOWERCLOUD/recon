@@ -6,20 +6,20 @@ Rectangle {
 
   property real cellWidth: 100
   property real cellHeight: 100
-  readonly property int imageCount: root.document.imageCount
-  //property ImageListModel model: ImageListModel {}
-
-  property ReconDocument document: ReconDocument {
+  readonly property int imageCount: root.imageSet.count
+  property ReconImageSet imageSet: ReconImageSet {
     baseUrl: "file:tmp"
   }
 
   Connections {
-    target: root.document
+    target: root.imageSet
 
-    onImageAdded: {
-      console.log("image added: " + url);
-      var data = { 'sourcePath': url.toString() };
-      imageListModel.append(data);
+    onNamesChanged: {
+      imageListModel.clear();
+      names.forEach(function(name, index, array){
+        var data = { 'sourcePath': imageSet.urlFromName(name).toString() };
+        imageListModel.append(data);
+      });
     }
   }
 
@@ -64,7 +64,7 @@ Rectangle {
           var flag = false;
 
           drop.urls.forEach(function(url, index, array){
-            if (root.document.importImage(url)) {
+            if (root.imageSet.importImage(url)) {
               flag = true;
             }
           })

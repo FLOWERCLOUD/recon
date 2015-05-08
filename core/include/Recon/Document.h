@@ -1,7 +1,9 @@
 #pragma once
 
+#include "FileSet.h"
+
 #include <vectormath.h>
-#include <QObject>
+
 #include <QVector>
 #include <QString>
 #include <QUrl>
@@ -27,21 +29,13 @@ struct Feature {
   uint8_t color[3];
 };
 
-class Document : public QObject {
+class Document : public FileSet {
   Q_OBJECT
-  Q_PROPERTY(QUrl baseUrl READ baseUrl WRITE setBaseUrl NOTIFY baseUrlChanged)
-  Q_PROPERTY(QString basePath READ basePath NOTIFY basePathChanged)
   Q_PROPERTY(int imageCount READ imageCount NOTIFY imageCountChanged)
   Q_PROPERTY(QList<QUrl> imageUrls READ imageUrls NOTIFY imageUrlsChanged)
 public:
   Document(QObject* parent = 0);
   ~Document();
-
-  bool isValid() const;
-
-  QUrl baseUrl() const;
-  void setBaseUrl(const QUrl& url);
-  QString basePath() const;
 
   const QVector<Camera>& cameras() const;
   const QVector<Feature>& features() const;
@@ -55,16 +49,12 @@ public:
   void save();
 
 signals:
-  void baseUrlChanged(QUrl url);
-  void basePathChanged(QString path);
-
   void imageUrlsChanged(QList<QUrl> urls);
   void imageCountChanged(int count);
 
   void imageAdded(QUrl url);
 
 private slots:
-  void onBaseUrlChanged(QUrl url);
   void onImageAdded(QUrl url);
 
 private:
@@ -73,12 +63,14 @@ private:
   void swapFeatures(QVector<Feature>& v);
 
 private:
-  QUrl m_BaseUrl;
+  void ensureInitImageUrls() const;
 
+private:
   QVector<Camera> m_Cameras;
   QVector<Feature> m_Features;
 
-  QList<QUrl> m_ImageUrls;
+  mutable bool m_ImageUrls_InitFlag;
+  mutable QList<QUrl> m_ImageUrls;
 };
 
 }

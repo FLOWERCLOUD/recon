@@ -1,9 +1,13 @@
 project(ReconCore)
 
 set(headers include/Recon/Document.h
+            include/Recon/FileSet.h
+            include/Recon/ImageSet.h
             include/Recon/NVMLoader.h
             include/Recon/SFMWorker.h)
 set(sources src/Document.cpp
+            src/FileSet.cpp
+            src/ImageSet.cpp
             src/NVMLoader.cpp
             src/SFMWorker.cpp)
 

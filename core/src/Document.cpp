@@ -8,13 +8,9 @@
 namespace recon {
 
 Document::Document(QObject* parent)
-: QObject(parent)
+: FileSet(parent), m_ImageUrls_InitFlag(true)
 {
   //qDebug("Document is created");
-
-  connect(this, &Document::baseUrlChanged,
-          this, &Document::onBaseUrlChanged,
-          Qt::DirectConnection);
 
   connect(this, &Document::imageAdded,
           this, &Document::onImageAdded,
@@ -24,44 +20,6 @@ Document::Document(QObject* parent)
 Document::~Document()
 {
   //qDebug("Document is destroyed");
-}
-
-bool Document::isValid() const
-{
-  return m_BaseUrl.isValid();
-}
-
-QUrl Document::baseUrl() const
-{
-  return m_BaseUrl;
-}
-
-QString Document::basePath() const
-{
-  return baseUrl().toLocalFile();
-}
-
-void Document::setBaseUrl(const QUrl& url)
-{
-  if (m_BaseUrl.isValid())
-    return;
-
-  //qDebug() << url.toLocalFile() << ", " << url.toString();
-  //qDebug() << QUrl::fromLocalFile("tmp");
-
-  if (url.isValid() && url.isLocalFile()) {
-    QDir dir(url.toLocalFile());
-    dir.makeAbsolute();
-
-    if (!dir.exists()) {
-      if (!dir.mkpath("images")) {
-        return;
-      }
-    }
-
-    m_BaseUrl = QUrl::fromLocalFile(dir.path());
-    emit baseUrlChanged(m_BaseUrl);
-  }
 }
 
 const QVector<Camera>& Document::cameras() const
@@ -78,12 +36,34 @@ const QVector<Feature>& Document::features() const
 
 int Document::imageCount() const
 {
+  ensureInitImageUrls();
   return m_ImageUrls.size();
 }
 
 QList<QUrl> Document::imageUrls() const
 {
+  ensureInitImageUrls();
   return m_ImageUrls;
+}
+
+void Document::ensureInitImageUrls() const
+{
+  if (m_ImageUrls_InitFlag && isValid()) {
+    QDir dir(basePath());
+    dir.cd("images");
+
+    QStringList files = dir.entryList(QDir::Files);
+    int n = files.size();
+
+    m_ImageUrls.clear();
+    m_ImageUrls.reserve(n);
+
+    for (int i = 0; i < n; ++i) {
+      m_ImageUrls << QUrl::fromLocalFile(dir.absoluteFilePath(files[i]));
+    }
+
+    m_ImageUrls_InitFlag = false;
+  }
 }
 
 bool Document::importImage(const QUrl& url)
@@ -93,6 +73,8 @@ bool Document::importImage(const QUrl& url)
 
   if (!url.toString().endsWith(".jpg", Qt::CaseInsensitive))
     return false;
+
+  ensureInitImageUrls();
 
   QDir dir(basePath());
   dir.cd("images");
@@ -113,11 +95,6 @@ bool Document::importImage(const QUrl& url)
   }
 
   return false;
-}
-
-void Document::onBaseUrlChanged(QUrl url)
-{
-  emit basePathChanged(url.toLocalFile());
 }
 
 void Document::onImageAdded(QUrl url)
