@@ -23,9 +23,15 @@ public:
 
   Q_INVOKABLE QUrl urlFromName(const QString& name) const;
 
+  Q_INVOKABLE void reload();
+
 signals:
   void countChanged(int count);
   void namesChanged(QStringList names);
+  void imageAdded(QString name);
+
+private slots:
+  void onImageAdded(QString name);
 
 private:
   QStringList m_Names;

@@ -8,19 +8,27 @@ Rectangle {
   property real cellHeight: 100
   readonly property int imageCount: root.imageSet.count
   property ReconImageSet imageSet: ReconImageSet {
-    baseUrl: "file:tmp"
+    baseUrl: "file:tmp-images"
   }
 
   Connections {
     target: root.imageSet
 
-    onNamesChanged: {
-      imageListModel.clear();
-      names.forEach(function(name, index, array){
-        var data = { 'sourcePath': imageSet.urlFromName(name).toString() };
-        imageListModel.append(data);
-      });
+    onImageAdded: {
+      var path = root.imageSet.urlFromName(name).toString();
+      //console.log("image added: " + name + "("+path+")");
+      var data = { 'sourcePath': path };
+      imageListModel.append(data);
     }
+  }
+
+  Component.onCompleted: {
+    root.imageSet.reload();
+    root.imageSet.names.forEach(function(name,index,array){
+      var path = root.imageSet.urlFromName(name).toString();
+      var data = { 'sourcePath': path };
+      imageListModel.append(data);
+    });
   }
 
   ListModel {

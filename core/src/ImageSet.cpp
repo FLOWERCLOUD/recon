@@ -8,6 +8,9 @@ namespace recon {
 ImageSet::ImageSet(QObject* parent)
 : FileSet(parent)
 {
+  connect(this, &ImageSet::imageAdded,
+          this, &ImageSet::onImageAdded,
+          Qt::DirectConnection);
 }
 
 ImageSet::~ImageSet()
@@ -45,8 +48,7 @@ bool ImageSet::importImage(QUrl url)
 
   if (QFile::copy(url.toLocalFile(), newpath)) {
     m_Names << name;
-    emit namesChanged(m_Names);
-    emit countChanged(m_Names.size());
+    emit imageAdded(name);
     return true;
   }
 
@@ -59,6 +61,22 @@ QUrl ImageSet::urlFromName(const QString& name) const
     return QUrl();
 
   return QUrl::fromLocalFile(QDir(basePath()).absoluteFilePath(name));
+}
+
+void ImageSet::onImageAdded(QString name)
+{
+  emit namesChanged(m_Names);
+  emit countChanged(m_Names.size());
+}
+
+void ImageSet::reload()
+{
+  if (!isValid())
+    return;
+
+  m_Names = QDir(basePath()).entryList(QDir::Files);
+  emit namesChanged(m_Names);
+  emit countChanged(m_Names.size());
 }
 
 }
