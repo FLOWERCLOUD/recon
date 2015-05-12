@@ -2,10 +2,12 @@ project(ReconCore)
 
 set(headers include/Recon/Camera.h
             include/Recon/FileSet.h
-            include/Recon/ImageSet.h)
+            include/Recon/ImageSet.h
+            include/Recon/SFMContext.h)
 set(sources src/Camera.cpp
             src/FileSet.cpp
-            src/ImageSet.cpp)
+            src/ImageSet.cpp
+            src/SFMContext.cpp)
 
 add_library(ReconCore ${sources} ${headers})
 

@@ -6,8 +6,14 @@ Item {
   anchors.fill: parent
   state: "IMPORT_IMAGES"
 
-  property ReconImageSet sourceImages: ReconImageSet {
+  ReconImageSet {
+    id: sourceImages
     baseUrl: "file:tmp-images"
+  }
+
+  Loader {
+    id: pageLoader
+    anchors.fill: parent
   }
 
   states: [
@@ -19,35 +25,58 @@ Item {
       }
     },
     State {
-      name: "CAMERA_CALIBRATION"
+      name: "PROCESS_SFM"
       PropertyChanges {
         target: pageLoader
-        sourceComponent: cameraCalibrationPage
+        sourceComponent: sfmProcessPage
+      }
+    },
+    State {
+      name: "VIEW_SFM"
+      PropertyChanges {
+        target: pageLoader
+        sourceComponent: sfmViewerPage
       }
     }
   ]
-
-  Loader {
-    id: pageLoader
-    anchors.fill: parent
-  }
 
   Component {
     id: importImagePage
 
     ImportImagePage {
-      imageSet: root.sourceImages
+      imageSet: sourceImages
       onDone: {
-        root.state = "CAMERA_CALIBRATION";
+        root.state = "PROCESS_SFM";
       }
     }
   }
 
   Component {
-    id: cameraCalibrationPage
+    id: sfmProcessPage
 
-    CameraCalibrationPage {
-      sourceImages: root.sourceImages
+    SFMProcessPage {
+      context: ReconSFMContext {
+        id: sfmContext
+        images: sourceImages
+      }
+
+      Connections {
+        target: sfmContext
+
+        onFinished: {
+          root.state = "VIEW_SFM";
+        }
+      }
     }
   }
+
+  Component {
+    id: sfmViewerPage
+
+    Rectangle {
+      anchors.fill: parent
+      color: "green"
+    }
+  }
+
 }

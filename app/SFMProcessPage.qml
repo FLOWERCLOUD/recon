@@ -6,8 +6,5 @@ Rectangle {
   anchors.fill: parent
   color: "grey"
 
-  property ReconImageSet sourceImages
-  //property ReconCameraSet cameras
-  
-
+  property ReconSFMContext context
 }
