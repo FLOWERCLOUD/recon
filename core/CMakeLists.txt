@@ -1,15 +1,11 @@
 project(ReconCore)
 
-set(headers include/Recon/Document.h
+set(headers include/Recon/Camera.h
             include/Recon/FileSet.h
-            include/Recon/ImageSet.h
-            include/Recon/NVMLoader.h
-            include/Recon/SFMWorker.h)
-set(sources src/Document.cpp
+            include/Recon/ImageSet.h)
+set(sources src/Camera.cpp
             src/FileSet.cpp
-            src/ImageSet.cpp
-            src/NVMLoader.cpp
-            src/SFMWorker.cpp)
+            src/ImageSet.cpp)
 
 add_library(ReconCore ${sources} ${headers})
 
@@ -17,6 +13,7 @@ target_link_libraries(ReconCore
   PUBLIC
   vectormath
   Qt5::Core
+  Qt5::Gui
 )
 
 target_compile_options(ReconCore

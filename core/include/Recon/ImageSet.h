@@ -11,7 +11,7 @@ namespace recon {
 class ImageSet : public FileSet {
   Q_OBJECT
   Q_PROPERTY(int count READ count NOTIFY countChanged)
-  Q_PROPERTY(QStringList names READ names NOTIFY namesChanged)
+  Q_PROPERTY(QStringList names READ names)
 public:
   ImageSet(QObject* parent = 0);
   virtual ~ImageSet();
@@ -19,7 +19,7 @@ public:
   int count() const;
   QStringList names() const;
 
-  Q_INVOKABLE bool importImage(QUrl url);
+  Q_INVOKABLE bool importImage(const QUrl& url);
 
   Q_INVOKABLE QUrl urlFromName(const QString& name) const;
 
@@ -27,7 +27,6 @@ public:
 
 signals:
   void countChanged(int count);
-  void namesChanged(QStringList names);
   void imageAdded(QString name);
 
 private slots:

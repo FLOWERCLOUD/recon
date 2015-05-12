@@ -1,9 +1,14 @@
 import QtQuick 2.2
+import recon 1.0
 
 Item {
   id: root
   anchors.fill: parent
   state: "IMPORT_IMAGES"
+
+  property ReconImageSet sourceImages: ReconImageSet {
+    baseUrl: "file:tmp-images"
+  }
 
   states: [
     State {
@@ -31,6 +36,7 @@ Item {
     id: importImagePage
 
     ImportImagePage {
+      imageSet: root.sourceImages
       onDone: {
         root.state = "CAMERA_CALIBRATION";
       }
@@ -41,6 +47,7 @@ Item {
     id: cameraCalibrationPage
 
     CameraCalibrationPage {
+      sourceImages: root.sourceImages
     }
   }
 }

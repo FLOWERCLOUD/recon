@@ -27,7 +27,7 @@ QStringList ImageSet::names() const
   return m_Names;
 }
 
-bool ImageSet::importImage(QUrl url)
+bool ImageSet::importImage(const QUrl& url)
 {
   if (!isValid() || !url.isLocalFile())
     return false;
@@ -65,7 +65,6 @@ QUrl ImageSet::urlFromName(const QString& name) const
 
 void ImageSet::onImageAdded(QString name)
 {
-  emit namesChanged(m_Names);
   emit countChanged(m_Names.size());
 }
 
@@ -75,7 +74,6 @@ void ImageSet::reload()
     return;
 
   m_Names = QDir(basePath()).entryList(QDir::Files);
-  emit namesChanged(m_Names);
   emit countChanged(m_Names.size());
 }
 

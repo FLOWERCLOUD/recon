@@ -7,6 +7,8 @@ Item {
 
   signal done()
 
+  property alias imageSet: imageView.imageSet
+
   ImageGridView {
     id: imageView
     anchors {

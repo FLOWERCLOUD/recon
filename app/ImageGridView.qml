@@ -7,9 +7,7 @@ Rectangle {
   property real cellWidth: 100
   property real cellHeight: 100
   readonly property int imageCount: root.imageSet.count
-  property ReconImageSet imageSet: ReconImageSet {
-    baseUrl: "file:tmp-images"
-  }
+  property ReconImageSet imageSet
 
   Connections {
     target: root.imageSet
