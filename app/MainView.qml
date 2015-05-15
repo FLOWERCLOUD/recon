@@ -55,17 +55,9 @@ Item {
     id: sfmProcessPage
 
     SFMProcessPage {
-      context: ReconSFMContext {
-        id: sfmContext
-        images: sourceImages
-      }
-
-      Connections {
-        target: sfmContext
-
-        onFinished: {
-          root.state = "VIEW_SFM";
-        }
+      images: sourceImages
+      onDone: {
+        root.state = "VIEW_SFM";
       }
     }
   }
