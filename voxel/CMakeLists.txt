@@ -2,9 +2,11 @@ project(voxel)
 
 set(headers src/CameraData.h
             src/CameraLoader.h
-            src/VoxelOctree.h)
+            src/VoxelData.h
+            src/VoxelBlock.h)
 
 set(sources src/CameraLoader.cpp
+            src/VoxelBlock.cpp
             src/main.cpp)
 
 add_executable(voxel ${sources} ${headers})

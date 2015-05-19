@@ -1,6 +1,6 @@
 #include "CameraData.h"
 #include "CameraLoader.h"
-#include "VoxelData.h"
+#include "VoxelBlock.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -49,17 +49,18 @@ int main(int argc, char* argv[])
               << ")\n";
   } else {
     std::cout << "failed to open " << bundlePath.toStdString() << std::endl;
+    return 0;
   }
 
   // Voxel Data
-  voxel::VoxelData voxels;
-  voxels.width = 128;
-  voxels.stride = sizeof(uint32_t);
-  voxels.data = malloc(sizeof(uint32_t) * voxels.width * voxels.width * voxels.width);
+  voxel::VoxelBlock voxels;
+  voxels.allocate(127, 127, 127);
 
-  // Determine bounding box
-  for (int i = 0, n = loader.cameras().size(); i < n; ++i) {
-  }
+  std::cout << "voxel grid width = " << voxels.grid_width() << "\n";
+
+  // Voxel Coloring
+  //for (int i = 0, n = loader.cameras().size(); i < n; ++i) {
+  //}
 
   return 0;
 }
