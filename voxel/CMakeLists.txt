@@ -8,4 +8,9 @@ set(sources src/CameraLoader.cpp
             src/main.cpp)
 
 add_executable(voxel ${sources} ${headers})
-target_link_libraries(voxel vectormath Boost)
+target_link_libraries(voxel
+  PUBLIC
+  vectormath
+  Qt5::Core
+  Qt5::Gui
+)

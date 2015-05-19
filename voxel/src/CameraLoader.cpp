@@ -1,54 +1,54 @@
 #include "CameraLoader.h"
-#include "CameraData.h"
-
-#include <fstream>
-#include <boost/filesystem.hpp>
-//#include <boost/gil/gil_all.hpp>
-//#include <boost/gil/extension/io/jpeg_io.hpp>
+#include <QDir>
+#include <QImageReader>
+#include <QFile>
+#include <QTextStream>
 
 namespace voxel {
 
-bool load_from_nvm(std::vector<std::string>& images,
-                   std::vector<CameraData>& cameras,
-                   const std::string& path)
+bool load_from_nvm(QStringList& images,
+                   CameraList& cameras,
+                   const QString& path)
 {
-  std::ifstream stream(path);
-  if (!stream.is_open())
+  QFile file(path);
+  if (!file.open(QFile::ReadOnly))
     return false;
+
+  QTextStream stream(&file);
 
   // Check file type
   {
-    std::string magic;
+    QString magic;
     stream >> magic;
     if (magic != "NVM_V3")
       return false;
   }
 
   // Camera count
+  int ncams;
   {
-    int ncams;
     stream >> ncams;
     if (ncams < 1)
       return false;
 
-    cameras.resize(ncams);
-    images.resize(ncams);
+    cameras.clear();
+    images.clear();
+    cameras.reserve(ncams);
+    images.reserve(ncams);
   }
 
-  boost::filesystem::path bundledir(path);
-  bundledir.remove_filename();
+  QDir bundledir(path.section(QDir::separator(), 0, -2, QString::SectionIncludeLeadingSep));
 
   // Camera data
   {
-    std::string imagename;
+    QString imagename;
     float focal;
     float orient[4]; // XYZW
     float center[3];
     float distortion;
     int temp;
 
-    auto it = cameras.begin(), itend = cameras.end();
-    for (; it != itend; ++it) {
+    for (int i = 0; i < ncams; ++i) {
       stream >> imagename;
       stream >> focal;
       stream >> orient[3] >> orient[0] >> orient[1] >> orient[2];
@@ -56,17 +56,16 @@ bool load_from_nvm(std::vector<std::string>& images,
       stream >> distortion;
       stream >> temp; // END of camera
 
-      boost::filesystem::path imagepath(imagename);
-      if (imagepath.is_relative())
-        imagepath = bundledir / imagepath;
+      if (QDir::isRelativePath(imagename))
+        imagename = bundledir.absoluteFilePath(imagename);
 
-      images[it - cameras.begin()] = imagepath.string();
+      images.append(imagename);
 
       //boost::gil::point2<ptrdiff_t> dim = boost::gil::jpeg_read_dimensions(imagepath.string());
       //float aspect = ((dim.x > 0 && dim.y > 0) ? (float)dim.x / (float)dim.y : 1.0f);
       float aspect = 1.0f;
 
-      CameraData& cam = *it;
+      CameraData cam;
       cam.focal_length = focal;
       cam.aspect_ratio = aspect;
       cam.radial_distortion[0] = distortion;
@@ -76,6 +75,8 @@ bool load_from_nvm(std::vector<std::string>& images,
 
       cam.update_extrinsic();
       cam.update_intrinsic();
+
+      cameras.append(cam);
     }
   }
 

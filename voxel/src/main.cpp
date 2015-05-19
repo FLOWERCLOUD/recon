@@ -1,44 +1,63 @@
 #include "CameraData.h"
 #include "CameraLoader.h"
-#include <boost/program_options.hpp>
+
+#include <QCommandLineParser>
+#include <QCoreApplication>
+
+#include <mutex>
 #include <iostream>
 
-namespace po = boost::program_options;
+static QCommandLineParser& cmdparse();
 
 int main(int argc, char* argv[])
 {
-  po::options_description desc("Allowed options");
-  desc.add_options()
-    ("help", "print this message")
-    ("bundle", po::value<std::string>(), "set input SFM bundle file")
-  ;
+  QCoreApplication app(argc, argv);
+  QCoreApplication::setApplicationName("voxel");
+  QCoreApplication::setApplicationVersion("1.0");
 
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
+  QCommandLineParser& parser = cmdparse();
+  parser.process(app);
 
-  if (vm.count("help")) {
-    std::cout << desc << std::endl;
+  const QStringList args = parser.positionalArguments();
+  if (args.count() < 1) {
+    std::cout << "Bundle path?\n";
     return 0;
   }
 
-  if (!vm.count("bundle")) {
-    std::cout << "input bunlde is not set\n";
-    return 0;
-  }
+  const QString bundlePath = args.at(0);
 
-  std::vector<std::string> images;
-  std::vector<voxel::CameraData> cameras;
+  QStringList images;
+  voxel::CameraList cameras;
 
-  if (voxel::load_from_nvm(images, cameras, vm["bundle"].as<std::string>())) {
+  if (voxel::load_from_nvm(images, cameras, bundlePath)) {
     int n = cameras.size();
     std::cout << "# of cameras = " << n << "\n";
     for (int i = 0; i < n; ++i) {
-      std::cout << "image = " << images[i] << "\n";
+      std::cout << "image = " << images[i].toStdString() << "\n";
     }
   } else {
-    std::cout << "failed to open " << vm["bundle"].as<std::string>() << std::endl;
+    std::cout << "failed to open " << bundlePath.toStdString() << std::endl;
   }
 
   return 0;
+}
+
+static void _init_cmdparse(QCommandLineParser& parser);
+
+static QCommandLineParser& cmdparse()
+{
+  static QCommandLineParser parser;
+  static std::once_flag flag;
+
+  std::call_once(flag, &_init_cmdparse, std::ref<QCommandLineParser>(parser));
+
+  return parser;
+}
+
+static void _init_cmdparse(QCommandLineParser& parser)
+{
+  parser.setApplicationDescription("VisualHull + VoxelColoring");
+  parser.addHelpOption();
+  parser.addVersionOption();
+  parser.addPositionalArgument("bundle", "Input bundle file");
 }

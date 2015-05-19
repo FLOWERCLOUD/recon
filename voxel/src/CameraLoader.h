@@ -5,15 +5,16 @@
 
 #include "CameraData.h"
 
-#include <string>
-#include <fstream>
-#include <vector>
+#include <QList>
+#include <QString>
 
 namespace voxel {
 
-bool load_from_nvm(std::vector<std::string>& images,
-                   std::vector<CameraData>& cameras,
-                   const std::string& path);
+typedef QList<CameraData> CameraList;
+
+bool load_from_nvm(QStringList& images,
+                   CameraList& cameras,
+                   const QString& path);
 
 }
 
