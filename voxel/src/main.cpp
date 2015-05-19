@@ -1,9 +1,11 @@
 #include "CameraData.h"
 #include "CameraLoader.h"
+#include "VoxelData.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
 
+#include <stdlib.h>
 #include <mutex>
 #include <iostream>
 
@@ -26,21 +28,37 @@ int main(int argc, char* argv[])
 
   const QString bundlePath = args.at(0);
 
-  QStringList images;
-  voxel::CameraList cameras;
+  voxel::CameraLoader loader;
 
-  if (voxel::load_from_nvm(images, cameras, bundlePath)) {
-    int n = cameras.size();
+  // Load Bundle
+  if (loader.load_from_nvm(bundlePath)) {
+    int n = loader.cameras().size();
     std::cout << "# of cameras = " << n << "\n";
     for (int i = 0; i < n; ++i) {
       //std::cout << "image = " << images[i].toStdString() << "\n";
       std::cout << "cam[" << i << "] {\n"
-                << "  image = " << images[i].toStdString() << "\n"
-                << "  aspect = " << cameras[i].aspect_ratio << "\n"
+                << "  image = " << loader.image_paths()[i].toStdString() << "\n"
+                << "  aspect = " << loader.cameras()[i].aspect_ratio << "\n"
                 << "}\n";
     }
+    voxel::AABB aabb = loader.feature_bounding();
+    std::cout << "feature AABB = ("
+              << aabb.minpos[0] << ", " << aabb.minpos[1] << ", " << aabb.minpos[2]
+              << ") to ("
+              << aabb.maxpos[0] << ", " << aabb.maxpos[1] << ", " << aabb.maxpos[2]
+              << ")\n";
   } else {
     std::cout << "failed to open " << bundlePath.toStdString() << std::endl;
+  }
+
+  // Voxel Data
+  voxel::VoxelData voxels;
+  voxels.width = 128;
+  voxels.stride = sizeof(uint32_t);
+  voxels.data = malloc(sizeof(uint32_t) * voxels.width * voxels.width * voxels.width);
+
+  // Determine bounding box
+  for (int i = 0, n = loader.cameras().size(); i < n; ++i) {
   }
 
   return 0;
@@ -60,7 +78,7 @@ static QCommandLineParser& cmdparse()
 
 static void _init_cmdparse(QCommandLineParser& parser)
 {
-  parser.setApplicationDescription("VisualHull + VoxelColoring");
+  parser.setApplicationDescription("Voxel Coloring");
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");

@@ -3,12 +3,35 @@
 #include <QImageReader>
 #include <QFile>
 #include <QTextStream>
+#include <string.h>
+#include <math.h>
 
 namespace voxel {
 
-bool load_from_nvm(QStringList& images,
-                   CameraList& cameras,
-                   const QString& path)
+CameraLoader::CameraLoader()
+{
+}
+
+CameraLoader::~CameraLoader()
+{
+}
+
+const QStringList& CameraLoader::image_paths() const
+{
+  return m_ImagePaths;
+}
+
+const CameraList& CameraLoader::cameras() const
+{
+  return m_Cameras;
+}
+
+const AABB& CameraLoader::feature_bounding() const
+{
+  return m_FeatureAABB;
+}
+
+bool CameraLoader::load_from_nvm(const QString& path)
 {
   QFile file(path);
   if (!file.open(QFile::ReadOnly))
@@ -31,10 +54,10 @@ bool load_from_nvm(QStringList& images,
     if (ncams < 1)
       return false;
 
-    cameras.clear();
-    images.clear();
-    cameras.reserve(ncams);
-    images.reserve(ncams);
+    m_Cameras.clear();
+    m_ImagePaths.clear();
+    m_Cameras.reserve(ncams);
+    m_ImagePaths.reserve(ncams);
   }
 
   QDir bundledir(path.section(QDir::separator(), 0, -2, QString::SectionIncludeLeadingSep));
@@ -60,7 +83,7 @@ bool load_from_nvm(QStringList& images,
       if (QDir::isRelativePath(imagename))
         imagename = bundledir.absoluteFilePath(imagename);
 
-      images.append(imagename);
+      m_ImagePaths.append(imagename);
 
       if (QFile::exists(imagename)) {
         QImageReader reader(imagename);
@@ -81,7 +104,39 @@ bool load_from_nvm(QStringList& images,
       cam.update_extrinsic();
       cam.update_intrinsic();
 
-      cameras.append(cam);
+      m_Cameras.append(cam);
+    }
+  }
+
+  // Feature count
+  int npoints;
+  {
+    stream >> npoints;
+    if (npoints < 1)
+      return false;
+  }
+
+  // Feature data
+  {
+    float pos[3];
+    int rgb[3]; // each component is in range of 0-255
+    int num_measurements;
+    int image_index, feature_index;
+    float pos2d[2];
+
+    for (int i = 0; i < npoints; ++i) {
+      stream >> pos[0] >> pos[1] >> pos[2];
+      stream >> rgb[0] >> rgb[1] >> rgb[2];
+      stream >> num_measurements;
+      for (int j = 0; j < num_measurements; ++j) {
+        stream >> image_index >> feature_index;
+        stream >> pos2d[0] >> pos2d[1];
+      }
+
+      if (i == 0)
+        m_FeatureAABB.fill(pos);
+      else
+        m_FeatureAABB.add(pos);
     }
   }
 
