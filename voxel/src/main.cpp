@@ -33,7 +33,11 @@ int main(int argc, char* argv[])
     int n = cameras.size();
     std::cout << "# of cameras = " << n << "\n";
     for (int i = 0; i < n; ++i) {
-      std::cout << "image = " << images[i].toStdString() << "\n";
+      //std::cout << "image = " << images[i].toStdString() << "\n";
+      std::cout << "cam[" << i << "] {\n"
+                << "  image = " << images[i].toStdString() << "\n"
+                << "  aspect = " << cameras[i].aspect_ratio << "\n"
+                << "}\n";
     }
   } else {
     std::cout << "failed to open " << bundlePath.toStdString() << std::endl;

@@ -43,6 +43,7 @@ bool load_from_nvm(QStringList& images,
   {
     QString imagename;
     float focal;
+    float aspect;
     float orient[4]; // XYZW
     float center[3];
     float distortion;
@@ -61,9 +62,13 @@ bool load_from_nvm(QStringList& images,
 
       images.append(imagename);
 
-      //boost::gil::point2<ptrdiff_t> dim = boost::gil::jpeg_read_dimensions(imagepath.string());
-      //float aspect = ((dim.x > 0 && dim.y > 0) ? (float)dim.x / (float)dim.y : 1.0f);
-      float aspect = 1.0f;
+      if (QFile::exists(imagename)) {
+        QImageReader reader(imagename);
+        QSize dim = reader.size();
+        aspect = (float)dim.width() / (float)dim.height();
+      } else {
+        aspect = 1.0f;
+      }
 
       CameraData cam;
       cam.focal_length = focal;
