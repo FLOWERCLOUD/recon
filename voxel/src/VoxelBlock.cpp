@@ -43,7 +43,6 @@ void VoxelBlock::clear()
 void VoxelBlock::set_world(const AABB& bounding)
 {
   using vectormath::aos::load_vec3;
-  using vectormath::aos::make_scalar;
   vec3 minpos = bounding.get_minpos();
   vec3 maxpos = bounding.get_maxpos();
   vec3 center = lerp(0.5f, minpos, maxpos);
