@@ -46,7 +46,7 @@ void VoxelBlock::set_world(const AABB& bounding)
   using vectormath::aos::make_scalar;
   vec3 minpos = bounding.get_minpos();
   vec3 maxpos = bounding.get_maxpos();
-  vec3 center = lerp(make_scalar(0.5f), minpos, maxpos);
+  vec3 center = lerp(0.5f, minpos, maxpos);
   vec3 size = abs(maxpos - minpos);
   store_vec3(m_WorldSize, size);
   store_vec3(m_WorldCenter, center);

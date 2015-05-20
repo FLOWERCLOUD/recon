@@ -111,7 +111,36 @@ bool VoxelColoring::process()
 
 void VoxelColoring::paint_voxel(int x, int y, int z)
 {
+  const int n = m_Cameras.size();
+
+  QRgb colors[n];
+  for (int i = 0; i < n; ++i) {
+    QImage img = m_Images[i];
+
+    float imgpos[3];
+    {
+      vec4 pos = to_vec4(m_Voxels.map_to_world(x, y, z), 1.0f);
+      pos = m_Cameras[i].get_extrinsic() * pos;
+      vec3 xyz = to_vec3(pos);
+      xyz = m_Cameras[i].get_intrinsic() * xyz;
+      store_vec3(imgpos, xyz);
+    }
+    imgpos[0] /= imgpos[2];
+    imgpos[1] /= imgpos[2];
+    imgpos[0] = (imgpos[0] + 1.0f) * 0.5f;
+    imgpos[1] = (-imgpos[1] + 1.0f) * 0.5f;
+
+    int px = imgpos[0] * img.width();
+    int py = imgpos[1] * img.height();
+
+    QRgb c = (img.valid(px, py) ? img.pixel(px, py) : 0);
+    colors[i] = c;
+  }
+
   // compute correlation
+  
+
+
   // paint voxel if correlation is sufficient
 }
 
