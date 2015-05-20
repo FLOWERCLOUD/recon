@@ -1,8 +1,11 @@
 #pragma once
 
+#include <vectormath.h>
 #include <string.h>
 
 namespace voxel {
+
+using vectormath::aos::vec3;
 
 /* Axis-Aligned Bounding Box
  *
@@ -13,6 +16,16 @@ struct AABB {
 
   inline void fill(const float* pos);
   inline void add(const float* pos);
+
+  inline vec3 get_minpos() const
+  {
+    return vectormath::aos::load_vec3(minpos);
+  }
+
+  inline vec3 get_maxpos() const
+  {
+    return vectormath::aos::load_vec3(maxpos);
+  }
 };
 
 inline void AABB::fill(const float* pos)

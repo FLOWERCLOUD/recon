@@ -1,6 +1,4 @@
-#include "CameraData.h"
-#include "CameraLoader.h"
-#include "VoxelBlock.h"
+#include "VoxelColoring.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -28,39 +26,12 @@ int main(int argc, char* argv[])
 
   const QString bundlePath = args.at(0);
 
-  voxel::CameraLoader loader;
-
-  // Load Bundle
-  if (loader.load_from_nvm(bundlePath)) {
-    int n = loader.cameras().size();
-    std::cout << "# of cameras = " << n << "\n";
-    for (int i = 0; i < n; ++i) {
-      //std::cout << "image = " << images[i].toStdString() << "\n";
-      std::cout << "cam[" << i << "] {\n"
-                << "  image = " << loader.image_paths()[i].toStdString() << "\n"
-                << "  aspect = " << loader.cameras()[i].aspect_ratio << "\n"
-                << "}\n";
-    }
-    voxel::AABB aabb = loader.feature_bounding();
-    std::cout << "feature AABB = ("
-              << aabb.minpos[0] << ", " << aabb.minpos[1] << ", " << aabb.minpos[2]
-              << ") to ("
-              << aabb.maxpos[0] << ", " << aabb.maxpos[1] << ", " << aabb.maxpos[2]
-              << ")\n";
+  voxel::VoxelColoring coloring(bundlePath);
+  if (coloring.process()) {
+    std::cout << "ok\n";
   } else {
-    std::cout << "failed to open " << bundlePath.toStdString() << std::endl;
-    return 0;
+    std::cout << "failed\n";
   }
-
-  // Voxel Data
-  voxel::VoxelBlock voxels;
-  voxels.allocate(127, 127, 127);
-
-  std::cout << "voxel grid width = " << voxels.grid_width() << "\n";
-
-  // Voxel Coloring
-  //for (int i = 0, n = loader.cameras().size(); i < n; ++i) {
-  //}
 
   return 0;
 }

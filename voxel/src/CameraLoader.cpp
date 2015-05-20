@@ -26,7 +26,7 @@ const CameraList& CameraLoader::cameras() const
   return m_Cameras;
 }
 
-const AABB& CameraLoader::feature_bounding() const
+const AABB& CameraLoader::feature_boundingbox() const
 {
   return m_FeatureAABB;
 }

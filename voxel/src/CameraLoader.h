@@ -23,7 +23,7 @@ public:
 
   const QStringList& image_paths() const;
   const CameraList& cameras() const;
-  const AABB& feature_bounding() const;
+  const AABB& feature_boundingbox() const;
 
 private:
   AABB m_FeatureAABB;

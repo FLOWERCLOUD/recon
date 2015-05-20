@@ -26,6 +26,7 @@ void VoxelBlock::allocate(int w, int h, int d)
 
   size_t siz = sizeof(Voxel) * v * v * v;
   m_RawData.resize(siz);
+  m_RawData.fill(0);
 
   m_Data.width = v;
   m_Data.stride = sizeof(Voxel);
@@ -37,6 +38,18 @@ void VoxelBlock::clear()
   memset(m_RealDim, 0, sizeof(int)*3);
   memset(&m_Data, 0, sizeof(VoxelData));
   m_RawData.clear();
+}
+
+void VoxelBlock::set_world(const AABB& bounding)
+{
+  using vectormath::aos::load_vec3;
+  using vectormath::aos::make_scalar;
+  vec3 minpos = bounding.get_minpos();
+  vec3 maxpos = bounding.get_maxpos();
+  vec3 center = lerp(make_scalar(0.5f), minpos, maxpos);
+  vec3 size = abs(maxpos - minpos);
+  store_vec3(m_WorldSize, size);
+  store_vec3(m_WorldCenter, center);
 }
 
 }
