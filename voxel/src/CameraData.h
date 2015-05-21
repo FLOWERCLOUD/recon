@@ -39,6 +39,9 @@ struct CameraData {
 
   inline void update_extrinsic();
   inline void update_intrinsic();
+
+  inline vec3 world_to_viewport(vec3 pos) const;
+  inline vec3 world_to_image(vec3 pos, int width, int height) const;
 };
 
 inline vec3 CameraData::get_position() const
@@ -77,7 +80,7 @@ inline mat3 CameraData::get_intrinsic() const
   return load_mat3(intrinsic);
 }
 
-void CameraData::update_extrinsic()
+inline void CameraData::update_extrinsic()
 {
   mat3 rot = to_mat3(get_orientation());
   vec3 pos = get_position();
@@ -86,7 +89,7 @@ void CameraData::update_extrinsic()
   store_vec3(extrinsic+9, trans);
 }
 
-void CameraData::update_intrinsic()
+inline void CameraData::update_intrinsic()
 {
   float f = focal_length;
   float a = aspect_ratio;
@@ -99,6 +102,27 @@ void CameraData::update_intrinsic()
   intrinsic[6] = 0.0f;
   intrinsic[7] = 0.0f;
   intrinsic[8] = 1.0f;
+}
+
+inline vec3 CameraData::world_to_viewport(vec3 pos) const
+{
+  vec3 pt = to_vec3(get_extrinsic() * to_vec4(pos, 1.0f));
+  pt = get_intrinsic() * pt;
+  pt = pt / get_z(pt);
+  return pt;
+}
+
+inline vec3 CameraData::world_to_image(vec3 pos, int width, int height) const
+{
+  using vectormath::aos::make_vec3;
+  using vectormath::aos::make_scaling_mat3;
+
+  vec3 pt = world_to_viewport(pos);
+  pt = pt * 0.5f + make_vec3(0.5f, 0.5f, 0.0f);
+
+  mat3 scale = make_scaling_mat3((float)width, (float)height, 1.0f);
+  pt = scale * pt;
+  return pt;
 }
 
 }

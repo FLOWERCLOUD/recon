@@ -4,10 +4,7 @@
 #include <QCoreApplication>
 
 #include <stdlib.h>
-#include <mutex>
 #include <iostream>
-
-static QCommandLineParser& cmdparse();
 
 int main(int argc, char* argv[])
 {
@@ -15,7 +12,15 @@ int main(int argc, char* argv[])
   QCoreApplication::setApplicationName("voxel");
   QCoreApplication::setApplicationVersion("1.0");
 
-  QCommandLineParser& parser = cmdparse();
+  QCommandLineParser parser;
+  parser.setApplicationDescription("Voxel Coloring");
+  parser.addHelpOption();
+  parser.addVersionOption();
+  parser.addPositionalArgument("bundle", "Input bundle file");
+
+  QCommandLineOption writePNGOption(QStringList() << "p" << "png", "Write PNG files", "directory");
+  parser.addOption(writePNGOption);
+
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();
@@ -33,25 +38,9 @@ int main(int argc, char* argv[])
     std::cout << "failed\n";
   }
 
+  if (parser.isSet(writePNGOption)) {
+    coloring.save_to_png_set(parser.value(writePNGOption));
+  }
+
   return 0;
-}
-
-static void _init_cmdparse(QCommandLineParser& parser);
-
-static QCommandLineParser& cmdparse()
-{
-  static QCommandLineParser parser;
-  static std::once_flag flag;
-
-  std::call_once(flag, &_init_cmdparse, std::ref<QCommandLineParser>(parser));
-
-  return parser;
-}
-
-static void _init_cmdparse(QCommandLineParser& parser)
-{
-  parser.setApplicationDescription("Voxel Coloring");
-  parser.addHelpOption();
-  parser.addVersionOption();
-  parser.addPositionalArgument("bundle", "Input bundle file");
 }

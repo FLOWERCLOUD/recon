@@ -6,6 +6,6 @@ include(qt5.cmake)
 
 add_subdirectory(gfxmath/simdmath)
 add_subdirectory(gfxmath/vectormath)
-#add_subdirectory(core)
-#add_subdirectory(app)
+#add_subdirectory(abandoned/core)
+#add_subdirectory(abandoned/app)
 add_subdirectory(voxel)

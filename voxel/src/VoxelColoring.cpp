@@ -1,6 +1,10 @@
 #include "VoxelColoring.h"
 #include "CameraLoader.h"
 #include <QtDebug>
+#include <QColor>
+#include <QImage>
+#include <QDir>
+//#include <rply.h>
 
 namespace voxel {
 
@@ -45,7 +49,7 @@ bool VoxelColoring::process()
   if (ncams == 0)
     return false;
 
-  m_Voxels.allocate(1024, 1024, 1024);
+  m_Voxels.allocate(64, 64, 64);
   m_Voxels.set_world(m_ModelAABB);
 
   int slicewidth = m_Voxels.width(),
@@ -112,7 +116,11 @@ bool VoxelColoring::process()
 void VoxelColoring::paint_voxel(int x, int y, int z)
 {
   const int n = m_Cameras.size();
+  bool passed = false;
 
+  
+
+#if 0
   QRgb colors[n];
   for (int i = 0; i < n; ++i) {
     QImage img = m_Images[i];
@@ -128,7 +136,7 @@ void VoxelColoring::paint_voxel(int x, int y, int z)
     imgpos[0] /= imgpos[2];
     imgpos[1] /= imgpos[2];
     imgpos[0] = (imgpos[0] + 1.0f) * 0.5f;
-    imgpos[1] = (-imgpos[1] + 1.0f) * 0.5f;
+    imgpos[1] = (imgpos[1] + 1.0f) * 0.5f;
 
     int px = imgpos[0] * img.width();
     int py = imgpos[1] * img.height();
@@ -138,10 +146,186 @@ void VoxelColoring::paint_voxel(int x, int y, int z)
   }
 
   // compute correlation
-  
+  int tag[n], cnt[n];
+  for (int i = 0; i < n; ++i) {
+    tag[i] = i, cnt[i] = 0;
+  }
 
+  for (int i = 0; i < n-1; ++i) {
+    QColor ci = QColor::fromRgba(colors[i]);
+    if (ci.alpha() == 0) continue;
+    for (int j = i+1; j < n; ++j) {
+      QColor cj = QColor::fromRgba(colors[j]);
+      if (cj.alpha() == 0)
+        continue;
+      int dr = ci.red() - cj.red();
+      int dg = ci.green() - cj.green();
+      int db = ci.blue() - cj.blue();
+      int eu = dr * dr + dg * dg + db * db;
+      if (eu < 100) {
+        if (tag[j] > tag[i]) {
+          tag[j] = tag[i];
+        } else {
+          tag[i] = tag[j];
+        }
+      }
+    }
+  }
+
+  for (int i = 0; i < n; ++i) {
+    cnt[tag[i]]++;
+  }
+
+  int maxcnt = 0, maxcnt_index = -1;
+  for (int i = 0; i < n; ++i) {
+    if (maxcnt < cnt[i]) {
+      maxcnt = cnt[i];
+      maxcnt_index = i;
+    }
+  }
+
+  if (maxcnt > 3) {
+    passed = true;
+  }
 
   // paint voxel if correlation is sufficient
+  if (passed) {
+    /*int r = 0, g = 0, b = 0;
+    for (int i = 0; i < n; ++i) {
+      if (maxcnt_index == tag[i]) {
+        QColor c(colors[i]);
+        r += c.red();
+        g += c.green();
+        b += c.blue();
+      }
+    }
+    r /= maxcnt;
+    g /= maxcnt;
+    b /= maxcnt;
+    QColor vc(r, g, b);*/
+    QColor vc = QColor(colors[maxcnt_index]);
+    //QColor vc = QColor(255, 0, 0);
+    m_Voxels.at(x, y, z) = vc.rgba();
+    //qDebug() << "Voxel (" << x << ", " << y << ", " << z << ")"
+    //         << " = " << vc;
+  }
+#endif
 }
+
+void VoxelColoring::save_to_png_set(const QString& basename)
+{
+  QDir dir(basename);
+  dir.mkpath(".");
+
+  int w, h, d;
+  w = m_Voxels.width();
+  h = m_Voxels.height();
+  d = m_Voxels.depth();
+
+  for (int k = 0; k < d; ++k) {
+    QImage image(w, h, QImage::Format_ARGB32);
+
+    for (int i = 0; i < w; ++i) {
+      for (int j = 0; j < h; ++j) {
+        QRgb c = m_Voxels.at(i, j, k);
+        image.setPixel(i, j, c);
+      }
+    }
+
+    image.save(dir.absoluteFilePath(QString("%1.png").arg(k)));
+  }
+}
+
+/*
+void VoxelColoring::save_to_ply(const QString& path)
+{
+  long ncubes = 0;
+  int w, h, d;
+  w = m_Voxels.width();
+  h = m_Voxels.height();
+  d = m_Voxels.depth();
+
+  for (int i = 0; i < w; ++i) {
+    for (int j = 0; j < h; ++j) {
+      for (int k = 0; k < d; ++k) {
+        if (QColor(m_Voxels.at(i,j,k)).alpha() > 0)
+          ncubes++;
+      }
+    }
+  }
+
+  p_ply oply = ply_create(path.toUtf8().constData(), PLY_LITTLE_ENDIAN, NULL, 0, NULL);
+  Q_CHECK_PTR(oply);
+
+  ply_add_element(oply, "vertex", 8 * ncubes);
+  ply_add_scalar_property(oply, "x", PLY_FLOAT);
+  ply_add_scalar_property(oply, "y", PLY_FLOAT);
+  ply_add_scalar_property(oply, "z", PLY_FLOAT);
+
+  ply_add_element(oply, "face", 6 * 2 * 3 * ncubes);
+  ply_add_list_property(oply, "vertex_indices", PLY_UINT, PLY_UINT);
+
+  ply_write_header(oply);
+
+  for (int i = 0; i < w; ++i) {
+    for (int j = 0; j < h; ++j) {
+      for (int k = 0; k < d; ++k) {
+        float pos[3], size[3];
+        store_vec3(pos, m_Voxels.map_to_world(i, j, k));
+        store_vec3(size, m_Voxels.world_size());
+        size[0] /= m_Voxels.width() * 2;
+        size[1] /= m_Voxels.height() * 2;
+        size[2] /= m_Voxels.depth() * 2;
+
+        ply_write(oply, pos[0]-size[0]);
+        ply_write(oply, pos[1]+size[1]);
+        ply_write(oply, pos[2]-size[2]);
+        ply_write(oply, pos[0]-size[0]);
+        ply_write(oply, pos[1]+size[1]);
+        ply_write(oply, pos[2]+size[2]);
+        ply_write(oply, pos[0]+size[0]);
+        ply_write(oply, pos[1]+size[1]);
+        ply_write(oply, pos[2]+size[2]);
+        ply_write(oply, pos[0]+size[0]);
+        ply_write(oply, pos[1]+size[1]);
+        ply_write(oply, pos[2]-size[2]);
+
+        ply_write(oply, pos[0]-size[0]);
+        ply_write(oply, pos[1]-size[1]);
+        ply_write(oply, pos[2]-size[2]);
+        ply_write(oply, pos[0]-size[0]);
+        ply_write(oply, pos[1]-size[1]);
+        ply_write(oply, pos[2]+size[2]);
+        ply_write(oply, pos[0]+size[0]);
+        ply_write(oply, pos[1]-size[1]);
+        ply_write(oply, pos[2]+size[2]);
+        ply_write(oply, pos[0]+size[0]);
+        ply_write(oply, pos[1]-size[1]);
+        ply_write(oply, pos[2]-size[2]);
+      }
+    }
+  }
+
+  for (int i = 0, off = 0; i < w; ++i) {
+    for (int j = 0; j < h; ++j) {
+      for (int k = 0; k < d; ++k) {
+
+        ply_write(off+0);
+        ply_write(off+1);
+        ply_write(off+2);
+
+        ply_write(off+0);
+        ply_write(off+2);
+        ply_write(off+3);
+
+        //ply_write(off+);
+
+        off += 8;
+      }
+    }
+  }
+
+  ply_close(oply);
+}*/
 
 }

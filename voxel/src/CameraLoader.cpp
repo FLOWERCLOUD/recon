@@ -6,6 +6,16 @@
 #include <string.h>
 #include <math.h>
 
+#define DEBUG_RENDER_FEATURES 1
+#define DEBUG_CAMERA_ID 0
+#if DEBUG_RENDER_FEATURES
+#  include <QImage>
+#  include <QPainter>
+#  include <QPen>
+#  include <QBrush>
+#  include <QtDebug>
+#endif
+
 namespace voxel {
 
 CameraLoader::CameraLoader()
@@ -62,6 +72,11 @@ bool CameraLoader::load_from_nvm(const QString& path)
 
   QDir bundledir(path.section(QDir::separator(), 0, -2, QString::SectionIncludeLeadingSep));
 
+#if DEBUG_RENDER_FEATURES
+  QImage dst0;
+  QImage src0;
+#endif
+
   // Camera data
   {
     QString imagename;
@@ -89,6 +104,15 @@ bool CameraLoader::load_from_nvm(const QString& path)
         QImageReader reader(imagename);
         QSize dim = reader.size();
         aspect = (float)dim.width() / (float)dim.height();
+        focal /= (float)dim.height();
+
+#if DEBUG_RENDER_FEATURES
+        if (i == DEBUG_CAMERA_ID) {
+          dst0 = QImage(dim, QImage::Format_ARGB32);
+          dst0.fill(qRgb(0, 0, 0));
+          src0 = QImage(imagename);
+        }
+#endif
       } else {
         aspect = 1.0f;
       }
@@ -116,6 +140,11 @@ bool CameraLoader::load_from_nvm(const QString& path)
       return false;
   }
 
+#if DEBUG_RENDER_FEATURES
+  QPainter dstpaint(&dst0);
+  QPainter srcpaint(&src0);
+#endif
+
   // Feature data
   {
     float pos[3];
@@ -137,8 +166,31 @@ bool CameraLoader::load_from_nvm(const QString& path)
         m_FeatureAABB.fill(pos);
       else
         m_FeatureAABB.add(pos);
+
+#if DEBUG_RENDER_FEATURES
+      using vectormath::aos::load_vec3;
+      const CameraData& cam = m_Cameras[DEBUG_CAMERA_ID];
+      vec3 pt = cam.world_to_image(load_vec3(pos), src0.width(), src0.height());
+      float ptdata[3];
+      store_vec3(ptdata, pt);
+
+      {
+        int penwidth = 10;
+        srcpaint.setPen(QPen(QBrush(Qt::green), penwidth));
+        srcpaint.drawPoint(ptdata[0], ptdata[1]);
+        dstpaint.setPen(QPen(QBrush(QColor(rgb[0], rgb[1], rgb[2])), penwidth));
+        dstpaint.drawPoint(ptdata[0], ptdata[1]);
+      }
+#endif
     }
   }
+
+  src0.setPixel(100, 100, qRgb(255, 0, 0));
+
+#if DEBUG_RENDER_FEATURES
+  dst0.save("debug-dst0.png");
+  src0.save("debug-src0.png");
+#endif
 
   return true;
 }

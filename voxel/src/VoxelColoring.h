@@ -17,6 +17,9 @@ public:
 
   bool process();
 
+  void save_to_png_set(const QString& basename);
+  //void save_to_ply(const QString& path);
+
 private:
   void paint_voxel(int x, int y, int z);
 
