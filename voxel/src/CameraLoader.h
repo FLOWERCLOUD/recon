@@ -9,6 +9,7 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <QSize>
 
 namespace voxel {
 
@@ -25,8 +26,17 @@ public:
   const CameraList& cameras() const;
   const AABB& feature_boundingbox() const;
 
+  void debug_render_features(const QString& path, int camera_id) const;
+
+private:
+  struct FeatureData {
+    float pos[3];
+    uint32_t color;
+  };
+
 private:
   AABB m_FeatureAABB;
+  QList<FeatureData> m_Features;
   QStringList m_ImagePaths;
   CameraList m_Cameras;
 };

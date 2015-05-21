@@ -115,10 +115,24 @@ bool VoxelColoring::process()
 
 void VoxelColoring::paint_voxel(int x, int y, int z)
 {
-  const int n = m_Cameras.size();
-  bool passed = false;
+  //const int n = m_Cameras.size();
 
-  
+  // map to camera 0
+  if (false) {
+    const QImage& img = m_Images[0];
+    const CameraData& cam = m_Cameras[0];
+
+    vec3 pos = m_Voxels.map_to_world(x, y, z);
+    pos = cam.world_to_image(pos, img.width(), img.height());
+
+    int px = (float)get_x(pos);
+    int py = (float)get_y(pos);
+
+    if (img.valid(px, py)) {
+      QRgb color = img.pixel(px, py);
+      m_Voxels.at(x, y, z) = color;
+    }
+  }
 
 #if 0
   QRgb colors[n];
