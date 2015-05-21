@@ -117,6 +117,13 @@ void VoxelColoring::paint_voxel(int x, int y, int z)
 {
   //const int n = m_Cameras.size();
 
+  Voxel& target = m_Voxels.at(x, y, z);
+  vec3 worldpos = m_Voxels.map_to_world(x, y, z);
+
+  //vec3 imagepos = cam.world_to_image(worldpos, width, height);
+  //vec3 
+
+
   // map to camera 0
   if (false) {
     const QImage& img = m_Images[0];

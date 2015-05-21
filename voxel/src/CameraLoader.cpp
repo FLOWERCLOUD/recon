@@ -188,6 +188,9 @@ void CameraLoader::debug_render_features(const QString& path, int camera_id) con
 
   QPainter painter(&canvas);
 
+  // Draw Feature Bounding Box
+
+  // Draw Feature Points
   for (int i = 0; i < npoints; ++i) {
     const FeatureData& feat = m_Features[i];
 
