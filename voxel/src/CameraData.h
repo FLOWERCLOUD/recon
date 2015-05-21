@@ -97,7 +97,7 @@ inline void CameraData::update_intrinsic()
   intrinsic[1] = 0.0f;
   intrinsic[2] = 0.0f;
   intrinsic[3] = 0.0f;
-  intrinsic[4] = f * 2.0f;
+  intrinsic[4] = -f * 2.0f;
   intrinsic[5] = 0.0f;
   intrinsic[6] = 0.0f;
   intrinsic[7] = 0.0f;
@@ -118,9 +118,9 @@ inline vec3 CameraData::world_to_image(vec3 pos, int width, int height) const
   using vectormath::aos::make_scaling_mat3;
 
   vec3 pt = world_to_viewport(pos);
-  pt = pt * 0.5f + make_vec3(0.5f, 0.5f, 0.0f);
+  pt = pt * 0.5f + make_vec3(0.5f, -0.5f, 0.0f);
 
-  mat3 scale = make_scaling_mat3((float)width, (float)height, 1.0f);
+  mat3 scale = make_scaling_mat3((float)width, (float)-height, 1.0f);
   pt = scale * pt;
   return pt;
 }
