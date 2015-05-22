@@ -4,7 +4,6 @@
 #include <QColor>
 #include <QImage>
 #include <QDir>
-//#include <rply.h>
 
 namespace voxel {
 
@@ -121,7 +120,7 @@ void VoxelColoring::paint_voxel(int x, int y, int z)
   vec3 worldpos = m_Voxels.map_to_world(x, y, z);
 
   //vec3 imagepos = cam.world_to_image(worldpos, width, height);
-  //vec3 
+  //vec3
 
 
   // map to camera 0
@@ -256,97 +255,5 @@ void VoxelColoring::save_to_png_set(const QString& basename)
     image.save(dir.absoluteFilePath(QString("%1.png").arg(k)));
   }
 }
-
-/*
-void VoxelColoring::save_to_ply(const QString& path)
-{
-  long ncubes = 0;
-  int w, h, d;
-  w = m_Voxels.width();
-  h = m_Voxels.height();
-  d = m_Voxels.depth();
-
-  for (int i = 0; i < w; ++i) {
-    for (int j = 0; j < h; ++j) {
-      for (int k = 0; k < d; ++k) {
-        if (QColor(m_Voxels.at(i,j,k)).alpha() > 0)
-          ncubes++;
-      }
-    }
-  }
-
-  p_ply oply = ply_create(path.toUtf8().constData(), PLY_LITTLE_ENDIAN, NULL, 0, NULL);
-  Q_CHECK_PTR(oply);
-
-  ply_add_element(oply, "vertex", 8 * ncubes);
-  ply_add_scalar_property(oply, "x", PLY_FLOAT);
-  ply_add_scalar_property(oply, "y", PLY_FLOAT);
-  ply_add_scalar_property(oply, "z", PLY_FLOAT);
-
-  ply_add_element(oply, "face", 6 * 2 * 3 * ncubes);
-  ply_add_list_property(oply, "vertex_indices", PLY_UINT, PLY_UINT);
-
-  ply_write_header(oply);
-
-  for (int i = 0; i < w; ++i) {
-    for (int j = 0; j < h; ++j) {
-      for (int k = 0; k < d; ++k) {
-        float pos[3], size[3];
-        store_vec3(pos, m_Voxels.map_to_world(i, j, k));
-        store_vec3(size, m_Voxels.world_size());
-        size[0] /= m_Voxels.width() * 2;
-        size[1] /= m_Voxels.height() * 2;
-        size[2] /= m_Voxels.depth() * 2;
-
-        ply_write(oply, pos[0]-size[0]);
-        ply_write(oply, pos[1]+size[1]);
-        ply_write(oply, pos[2]-size[2]);
-        ply_write(oply, pos[0]-size[0]);
-        ply_write(oply, pos[1]+size[1]);
-        ply_write(oply, pos[2]+size[2]);
-        ply_write(oply, pos[0]+size[0]);
-        ply_write(oply, pos[1]+size[1]);
-        ply_write(oply, pos[2]+size[2]);
-        ply_write(oply, pos[0]+size[0]);
-        ply_write(oply, pos[1]+size[1]);
-        ply_write(oply, pos[2]-size[2]);
-
-        ply_write(oply, pos[0]-size[0]);
-        ply_write(oply, pos[1]-size[1]);
-        ply_write(oply, pos[2]-size[2]);
-        ply_write(oply, pos[0]-size[0]);
-        ply_write(oply, pos[1]-size[1]);
-        ply_write(oply, pos[2]+size[2]);
-        ply_write(oply, pos[0]+size[0]);
-        ply_write(oply, pos[1]-size[1]);
-        ply_write(oply, pos[2]+size[2]);
-        ply_write(oply, pos[0]+size[0]);
-        ply_write(oply, pos[1]-size[1]);
-        ply_write(oply, pos[2]-size[2]);
-      }
-    }
-  }
-
-  for (int i = 0, off = 0; i < w; ++i) {
-    for (int j = 0; j < h; ++j) {
-      for (int k = 0; k < d; ++k) {
-
-        ply_write(off+0);
-        ply_write(off+1);
-        ply_write(off+2);
-
-        ply_write(off+0);
-        ply_write(off+2);
-        ply_write(off+3);
-
-        //ply_write(off+);
-
-        off += 8;
-      }
-    }
-  }
-
-  ply_close(oply);
-}*/
 
 }
