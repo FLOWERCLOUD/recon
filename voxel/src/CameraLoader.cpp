@@ -10,7 +10,7 @@
 #include <string.h>
 #include <math.h>
 
-namespace voxel {
+namespace recon {
 
 CameraLoader::CameraLoader()
 {
@@ -155,7 +155,7 @@ bool CameraLoader::load_from_nvm(const QString& path)
     }
   }
 
-#if true
+#if false
   debug_render_features("debug_features-0.png", 0);
 #endif
 
@@ -164,8 +164,6 @@ bool CameraLoader::load_from_nvm(const QString& path)
 
 void CameraLoader::debug_render_features(const QString& path, int camera_id) const
 {
-  using vectormath::aos::load_vec3;
-
   if (camera_id < 0 || camera_id >= m_Cameras.size())
     return;
 
@@ -194,10 +192,10 @@ void CameraLoader::debug_render_features(const QString& path, int camera_id) con
   for (int i = 0; i < npoints; ++i) {
     const FeatureData& feat = m_Features[i];
 
-    vec3 pt = cam.world_to_image(load_vec3(feat.pos), width, height);
+    vec3 pt = cam.world_to_image(vec3::load(feat.pos), width, height);
 
     float ptdata[3];
-    store_vec3(ptdata, pt);
+    pt.store(ptdata);
 
     int penwidth = 10;
     painter.setPen(QPen(QBrush(QColor((QRgb)feat.color)), penwidth));

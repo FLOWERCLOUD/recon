@@ -1,11 +1,8 @@
 #pragma once
 
-#ifndef _VOXEL_CAMERADATA_H_
-#define _VOXEL_CAMERADATA_H_
-
 #include <vectormath.h>
 
-namespace voxel {
+namespace recon {
 
 using vectormath::aos::vec3;
 using vectormath::aos::vec4;
@@ -46,47 +43,41 @@ struct CameraData {
 
 inline vec3 CameraData::get_position() const
 {
-  using vectormath::aos::load_vec3;
-  return load_vec3(center);
+  return vec3::load(center);
 }
 
 inline void CameraData::store_position(vec3 pos)
 {
-  store_vec3(center, pos);
+  pos.store(center);
 }
 
 inline quat CameraData::get_orientation() const
 {
-  using vectormath::aos::load_quat;
-  return load_quat(orientation);
+  return quat::load(orientation);
 }
 
 inline void CameraData::store_orientation(quat q)
 {
-  store_quat(orientation, q);
+  q.store(orientation);
 }
 
 inline mat4 CameraData::get_extrinsic() const
 {
-  using vectormath::aos::load_mat3;
-  using vectormath::aos::load_vec3;
-  using vectormath::aos::make_mat4;
-  return make_mat4(load_mat3(extrinsic), load_vec3(extrinsic+9));
+  return mat4(mat3::load(extrinsic), vec3::load(extrinsic+9));
 }
 
 inline mat3 CameraData::get_intrinsic() const
 {
-  using vectormath::aos::load_mat3;
-  return load_mat3(intrinsic);
+  return mat3::load(intrinsic);
 }
 
 inline void CameraData::update_extrinsic()
 {
-  mat3 rot = to_mat3(get_orientation());
+  mat3 rot = (mat3)get_orientation();
   vec3 pos = get_position();
   vec3 trans = -(rot * pos);
-  store_mat3(extrinsic+0, rot);
-  store_vec3(extrinsic+9, trans);
+  rot.store(extrinsic+0);
+  trans.store(extrinsic+9);
 }
 
 inline void CameraData::update_intrinsic()
@@ -106,25 +97,20 @@ inline void CameraData::update_intrinsic()
 
 inline vec3 CameraData::world_to_viewport(vec3 pos) const
 {
-  vec3 pt = to_vec3(get_extrinsic() * to_vec4(pos, 1.0f));
+  vec3 pt = to_vec3(get_extrinsic() * vec4(pos, 1.0f));
   pt = get_intrinsic() * pt;
-  pt = pt / get_z(pt);
+  pt = pt / pt.z();
   return pt;
 }
 
 inline vec3 CameraData::world_to_image(vec3 pos, int width, int height) const
 {
-  using vectormath::aos::make_vec3;
-  using vectormath::aos::make_scaling_mat3;
-
   vec3 pt = world_to_viewport(pos);
-  pt = pt * 0.5f + make_vec3(0.5f, -0.5f, 0.0f);
+  pt = pt * 0.5f + vec3(0.5f, -0.5f, 0.0f);
 
-  mat3 scale = make_scaling_mat3((float)width, (float)-height, 1.0f);
+  mat3 scale = mat3::scaling((float)width, (float)-height, 1.0f);
   pt = scale * pt;
   return pt;
 }
 
 }
-
-#endif /* end of include guard: _VOXEL_CAMERADATA_H_ */

@@ -1,17 +1,7 @@
 project(voxel)
 
-set(headers src/morton_code.h
-            src/CameraData.h
-            src/CameraLoader.h
-            src/VoxelData.h
-            src/VoxelBlock.h
-            src/VoxelColoring.h)
-
-set(sources src/morton_code.cpp
-            src/CameraLoader.cpp
-            src/VoxelBlock.cpp
-            src/VoxelColoring.cpp)
-
+file(GLOB headers src/*.h)
+file(GLOB sources src/*.cpp)
 add_executable(voxel src/main.cpp ${sources} ${headers})
 
 add_subdirectory(trimesh2)

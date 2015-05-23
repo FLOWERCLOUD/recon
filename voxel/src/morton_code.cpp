@@ -1,6 +1,8 @@
 #include "morton_code.h"
+#include <stddef.h>
+#include <limits.h>
 
-namespace voxel {
+namespace recon {
 
 static inline uint64_t _morton_split_magicbits(uint32_t a)
 {
@@ -146,6 +148,18 @@ uint64_t morton_encode_lookup(uint32_t x, uint32_t y, uint32_t z)
                           morton256_y[(y) & 0xFF ] |
                           morton256_x[(x) & 0xFF ];
   return result;
+}
+
+void morton_decode(uint64_t m, uint32_t& x, uint32_t& y, uint32_t& z)
+{
+  x = 0;
+	y = 0;
+	z = 0;
+	for (uint64_t i = 0; i < (sizeof(uint64_t) * CHAR_BIT)/3; ++i) {
+		x |= ((m & (uint64_t( 1ull ) << uint64_t((3ull * i) + 0ull))) >> uint64_t(((3ull * i) + 0ull)-i));
+		y |= ((m & (uint64_t( 1ull ) << uint64_t((3ull * i) + 1ull))) >> uint64_t(((3ull * i) + 1ull)-i));
+		z |= ((m & (uint64_t( 1ull ) << uint64_t((3ull * i) + 2ull))) >> uint64_t(((3ull * i) + 2ull)-i));
+	}
 }
 
 }

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef _VOXEL_CAMERALOADER_H_
-#define _VOXEL_CAMERALOADER_H_
-
 #include "CameraData.h"
 #include "AABB.h"
 
@@ -11,7 +8,7 @@
 #include <QStringList>
 #include <QSize>
 
-namespace voxel {
+namespace recon {
 
 typedef QList<CameraData> CameraList;
 
@@ -42,5 +39,3 @@ private:
 };
 
 }
-
-#endif /* end of include guard: _VOXEL_CAMERALOADER_H_ */
