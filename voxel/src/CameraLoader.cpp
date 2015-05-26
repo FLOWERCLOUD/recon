@@ -65,6 +65,8 @@ bool CameraLoader::load_from_nvm(const QString& path)
   }
 
   QDir bundledir(path.section(QDir::separator(), 0, -2, QString::SectionIncludeLeadingSep));
+  if (!bundledir.exists())
+    return false;
 
   // Camera data
   {

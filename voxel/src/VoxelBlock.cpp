@@ -7,8 +7,8 @@
 namespace recon {
 
 VoxelBlockGenerator::VoxelBlockGenerator(const AABB& boundingbox)
-: m_GridWidth(16)
-, m_BlockWidth(256)
+: m_GridWidth(1)
+, m_BlockWidth(64)
 {
   // Setup Virtual Bounding Box
   float siz[3];

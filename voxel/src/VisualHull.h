@@ -15,7 +15,6 @@ struct VisualHullParams {
   QList<QString> mask_paths;
 
   VoxelBlock* block;
-  AABB block_bbox;
 };
 
 void visualhull(VisualHullParams& params);
