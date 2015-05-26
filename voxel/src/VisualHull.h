@@ -8,6 +8,8 @@
 
 namespace recon {
 
+struct VoxelBlock;
+
 struct VisualHullParams {
   QList<CameraData> cameras;
   QList<QString> mask_paths;
@@ -16,6 +18,6 @@ struct VisualHullParams {
   AABB block_bbox;
 };
 
-void process(VisualHullParams& params);
+void visualhull(VisualHullParams& params);
 
 }

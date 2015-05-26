@@ -1,5 +1,6 @@
 #include "VoxelBlock.h"
 #include "CameraLoader.h"
+#include "VisualHull.h"
 #include "Debug.h"
 #include <QCommandLineParser>
 #include <QCoreApplication>
