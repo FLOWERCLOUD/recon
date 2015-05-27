@@ -26,10 +26,12 @@ ModelBuilder::~ModelBuilder()
 
 bool ModelBuilder::execute()
 {
-  VoxelBlockManager blockman(m_ModelBox, 1, 64);
+  VoxelBlockManager blockman(m_ModelBox, 4, 16);
 
   for (VoxelBlock* block = blockman.generate(); block;) {
     //printf("block (%u, %u, %u)\n", block->origin[0], block->origin[1], block->origin[2]);
+
+    // TODO: skip block if outside model bounding box
 
     // Initialize voxels
     block->each_voxel([block](uint64_t morton, VoxelData& voxel) {
@@ -78,7 +80,7 @@ bool ModelBuilder::execute()
     // Voxel Coloring
 
     // debug: export voxels to mesh
-    save_mesh(block, m_MeshPath);
+    save_mesh(block, QString("voxelblock-%1.ply").arg(block->morton_begin));
 
     // Add to octree
 
@@ -96,12 +98,38 @@ static void save_mesh(VoxelBlock* block, const QString& path)
     if (voxel.flag) count++;
   });
 
+  uint64_t morton_step = block->width;
+  morton_step *= block->width;
+  morton_step *= block->width;
+
   trimesh::TriMesh mesh;
   mesh.vertices.reserve(8 * count);
+  mesh.colors.reserve(8 * count);
   mesh.faces.reserve(6 * 2 * count);
 
+  QRgb color;
+  {
+    static const QRgb colors[8] = {
+      qRgb(255, 255, 255),
+      qRgb(255, 0, 0),
+      qRgb(0, 255, 0),
+      qRgb(0, 0, 255),
+      qRgb(0, 255, 255),
+      qRgb(255, 0, 255),
+      qRgb(255, 255, 0),
+      qRgb(255, 255, 255)
+    };
+    int color_index = (block->morton_begin / morton_step) % 8;
+    color = colors[color_index];
+    //printf("color = 0x%0X\n", color);
+  }
+
+  trimesh::Color vcolor = { (float)qRed(color) / 255.0f,
+                            (float)qGreen(color) / 255.0f,
+                            (float)qBlue(color) / 255.0f };
+
   uint64_t vid = 0;
-  block->each_voxel([&vid, &mesh, block](uint64_t morton, VoxelData& voxel) {
+  block->each_voxel([&vid, &mesh, block, vcolor](uint64_t morton, VoxelData& voxel) {
     if (voxel.flag) {
       AABox vbox = block->voxelbox(morton);
       float x0 = vbox.minpos[0], y0 = vbox.minpos[1], z0 = vbox.minpos[2],
@@ -132,8 +160,10 @@ static void save_mesh(VoxelBlock* block, const QString& path)
       };
       vid += 8;
 
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < 8; ++i) {
         mesh.vertices.push_back(pt[i]);
+        mesh.colors.push_back(vcolor);
+      }
       for (int i = 0; i < 12; ++i)
         mesh.faces.push_back(face[i]);
     }

@@ -341,7 +341,7 @@ out:
 // Read a ply file
 static bool read_ply(FILE *f, TriMesh *mesh)
 {
-	char buf[1024];	
+	char buf[1024];
 	bool binary = false, need_swap = false, float_color = false;
 	int result, nverts = 0, nfaces = 0, nstrips = 0, ngrid = 0;
 	int vert_len = 0, vert_pos = -1, vert_norm = -1;
@@ -1610,14 +1610,14 @@ static bool write_ply_header(TriMesh *mesh, FILE *f, const char *format,
 		FPRINTF(f, "property float nz\n");
 	}
 	if (!mesh->colors.empty() && float_color) {
-		FPRINTF(f, "property float diffuse_red\n");
-		FPRINTF(f, "property float diffuse_green\n");
-		FPRINTF(f, "property float diffuse_blue\n");
+		FPRINTF(f, "property float red\n");
+		FPRINTF(f, "property float green\n");
+		FPRINTF(f, "property float blue\n");
 	}
 	if (!mesh->colors.empty() && !float_color) {
-		FPRINTF(f, "property uchar diffuse_red\n");
-		FPRINTF(f, "property uchar diffuse_green\n");
-		FPRINTF(f, "property uchar diffuse_blue\n");
+		FPRINTF(f, "property uchar red\n");
+		FPRINTF(f, "property uchar green\n");
+		FPRINTF(f, "property uchar blue\n");
 	}
 	if (!mesh->confidences.empty()) {
 		FPRINTF(f, "property float confidence\n");
