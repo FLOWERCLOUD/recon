@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPen>
 #include <QBrush>
+//#include <stdio.h>
 #include <string.h>
 #include <math.h>
 
@@ -20,17 +21,12 @@ CameraLoader::~CameraLoader()
 {
 }
 
-const QStringList& CameraLoader::image_paths() const
-{
-  return m_ImagePaths;
-}
-
-const CameraList& CameraLoader::cameras() const
+const QList<Camera>& CameraLoader::cameras() const
 {
   return m_Cameras;
 }
 
-const AABB& CameraLoader::feature_boundingbox() const
+const AABox& CameraLoader::feature_boundingbox() const
 {
   return m_FeatureAABB;
 }
@@ -59,9 +55,7 @@ bool CameraLoader::load_from_nvm(const QString& path)
       return false;
 
     m_Cameras.clear();
-    m_ImagePaths.clear();
     m_Cameras.reserve(ncams);
-    m_ImagePaths.reserve(ncams);
   }
 
   QDir bundledir(path.section(QDir::separator(), 0, -2, QString::SectionIncludeLeadingSep));
@@ -89,8 +83,6 @@ bool CameraLoader::load_from_nvm(const QString& path)
       if (QDir::isRelativePath(imagename))
         imagename = bundledir.absoluteFilePath(imagename);
 
-      m_ImagePaths.append(imagename);
-
       if (QFile::exists(imagename)) {
         QImageReader reader(imagename);
         QSize dim = reader.size();
@@ -100,17 +92,13 @@ bool CameraLoader::load_from_nvm(const QString& path)
         aspect = 1.0f;
       }
 
-      CameraData cam;
-      cam.focal_length = focal;
-      cam.aspect_ratio = aspect;
-      cam.radial_distortion[0] = distortion;
-      cam.radial_distortion[1] = 0.0f;
-      memcpy(cam.center, center, sizeof(float)*3);
-      memcpy(cam.orientation, orient, sizeof(float)*4);
-
-      cam.update_extrinsic();
-      cam.update_intrinsic();
-
+      Camera cam;
+      cam.setFocal(focal);
+      cam.setAspect(aspect);
+      cam.setRadialDistortion(distortion, 0.0f);
+      cam.setCenter(vec3::load(center));
+      cam.setOrientation(quat::load(orient));
+      cam.setImagePath(imagename);
       m_Cameras.append(cam);
     }
   }
@@ -169,9 +157,9 @@ void CameraLoader::debug_render_features(const QString& path, int camera_id) con
   if (camera_id < 0 || camera_id >= m_Cameras.size())
     return;
 
-  const CameraData& cam = m_Cameras[camera_id];
+  Camera cam = m_Cameras[camera_id];
 
-  QImage canvas = QImage(m_ImagePaths[camera_id]);
+  QImage canvas = QImage(cam.imagePath());
   if (canvas.isNull())
     return;
 
@@ -188,20 +176,32 @@ void CameraLoader::debug_render_features(const QString& path, int camera_id) con
 
   QPainter painter(&canvas);
 
+  mat4 extrinsic = cam.extrinsic();
+  mat4 intrinsic = cam.intrinsicForImage(width, height);
+  /*{
+    float m[16];
+    transpose(intrinsic).store(m);
+
+    for (int i = 0; i < 16; ++i) {
+      printf("%f ", m[i]);
+      if (i % 4 == 3)
+        printf("\n");
+    }
+  }*/
+
   // Draw Feature Bounding Box
 
   // Draw Feature Points
   for (int i = 0; i < npoints; ++i) {
     const FeatureData& feat = m_Features[i];
 
-    vec3 pt = cam.world_to_image(vec3::load(feat.pos), width, height);
-
-    float ptdata[3];
-    pt.store(ptdata);
+    vec3 worldpos = vec3::load(feat.pos);
+    vec3 pt = proj_vec3(intrinsic * (extrinsic * vec4(worldpos, 1.0f)));
+    //printf("(%f %f %f)\n", (float)pt.x(), (float)pt.y(), 1.0f / (float)pt.z());
 
     int penwidth = 10;
     painter.setPen(QPen(QBrush(QColor((QRgb)feat.color)), penwidth));
-    painter.drawPoint(ptdata[0], ptdata[1]);
+    painter.drawPoint((float)pt.x(), (float)pt.y());
   }
 
   canvas.save(path);

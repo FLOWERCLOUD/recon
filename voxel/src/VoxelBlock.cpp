@@ -1,89 +1,104 @@
 #include "VoxelBlock.h"
 #include "morton_code.h"
-#include "Debug.h"
+#include <stdlib.h>
 #include <math.h>
-#include <string.h>
 
 namespace recon {
 
-VoxelBlockGenerator::VoxelBlockGenerator(const AABB& boundingbox)
-: m_GridWidth(1)
-, m_BlockWidth(64)
+VoxelBlockManager::VoxelBlockManager(const AABox& modelBox,
+                                     int gridWidth,
+                                     int blockWidth)
+: m_GridWidth(gridWidth)
+, m_BlockWidth(blockWidth)
+, m_CurrentMorton(0)
+, m_MortonStep(0)
+, m_MortonEnd(0)
+//, m_BlockUseCount(0)
+, m_BlockCapacity(0)
+, m_BlockPool(NULL)
+, m_FreeBlock(NULL)
+, m_VoxelMemory(NULL)
 {
-  // Setup Virtual Bounding Box
   float siz[3];
-  boundingbox.get_size().store(siz);
+  modelBox.get_size().store(siz);
   float maxsiz = fmaxf(siz[0], fmaxf(siz[1], siz[2]));
+  m_GridBox.set_size_center(vec3(maxsiz, maxsiz, maxsiz), modelBox.get_center());
 
-  m_VirtualBox.set_size_center(vec3(maxsiz, maxsiz, maxsiz), boundingbox.get_center());
-
-  //qDebug() << "m_BoundingBox = " << m_BoundingBox;
-  //qDebug() << "m_VirtualBox = " << m_VirtualBox;
-
-  // Setup dimensions and ending morton
   int bwidth = m_BlockWidth;
   int total_width = m_GridWidth * bwidth;
-  m_NumVoxelsPerBlock = (uint64_t)bwidth * bwidth * bwidth;
   m_MortonEnd = morton_encode(total_width-1, total_width-1, total_width-1)+1;
   m_MortonStep = morton_encode(bwidth-1, bwidth-1, bwidth-1)+1;
 
-  //qDebug() << "total_width = " << total_width;
-  //qDebug() << "m_NumVoxelsPerBlock = " << m_NumVoxelsPerBlock;
-  //qDebug() << "m_MortonEnd = " << m_MortonEnd;
-  //qDebug() << "m_MortonStep = " << m_MortonStep;
-  //{
-  //  uint32_t x, y, z;
-  //  morton_decode(m_MortonStep-1, x, y, z);
-  //  qDebug() << "decode => " << x << ", " << y << ", " << z;
-  //}
+  int cap = 16;
+  m_BlockPool = (VoxelBlockNode*)malloc(sizeof(VoxelBlockNode) * cap);
+  m_VoxelMemory = (VoxelData*)malloc(sizeof(VoxelData) * m_MortonStep * cap);
+  m_BlockCapacity = cap;
 
-  // Set starting morton
-  m_CurrentMorton = 0;
+  memset(m_BlockPool, 0, sizeof(VoxelBlockNode) * cap);
+
+  for (int i = 0; i < cap-1; ++i) {
+    m_BlockPool[i].next = m_BlockPool + (i+1);
+  }
+  m_BlockPool[cap-1].next = NULL;
+  m_FreeBlock = m_BlockPool;
 }
 
-VoxelBlockGenerator::~VoxelBlockGenerator()
+VoxelBlockManager::~VoxelBlockManager()
 {
+  free(m_BlockPool);
+  free(m_VoxelMemory);
 }
 
-bool VoxelBlockGenerator::generate(VoxelBlock& block)
+VoxelBlock* VoxelBlockManager::generate()
 {
+  if (m_CurrentMorton >= m_MortonEnd)
+    return NULL;
+  if (m_FreeBlock == NULL)
+    return NULL;
+
+  // Pop from free list
+  VoxelBlockNode* node = m_FreeBlock;
+  m_FreeBlock = node->next;
+
+  // Iterate the current morton code
   uint64_t morton = m_CurrentMorton;
-  if (morton >= m_MortonEnd)
-    return false;
   m_CurrentMorton += m_MortonStep;
+
+  // Get memory address of voxel data
+  VoxelData* data = m_VoxelMemory + m_MortonStep * (node - m_BlockPool);
 
   uint32_t x, y, z;
   morton_decode(morton, x, y, z);
 
+  // Compute bounding box
   int gridsiz = m_GridWidth;
   int blksiz = m_BlockWidth;
-  AABB bbox;
-  vec3 bsiz = m_VirtualBox.get_size() / (float)gridsiz;
+  AABox bbox;
+  vec3 bsiz = m_GridBox.get_size() / (float)gridsiz;
   vec3 bpos_gridspace = vec3((float)(x/blksiz), (float)(y/blksiz), (float)(z/blksiz));
-  vec3 bmin = m_VirtualBox.get_minpos() + bsiz.x() * bpos_gridspace;
+  vec3 bmin = m_GridBox.get_minpos() + bsiz.x() * bpos_gridspace;
   bmin.store(bbox.minpos);
   (bmin + bsiz).store(bbox.maxpos);
 
-  //qDebug() << "Block size = " << bsiz;
-  //qDebug() << "Block in grid = " << bpos_gridspace;
+  // Initialize voxel block
+  VoxelBlock* block = (VoxelBlock*)node;
+  block->morton_begin = morton;
+  block->morton_end = morton + m_MortonStep;
+  block->origin[0] = x;
+  block->origin[1] = y;
+  block->origin[2] = z;
+  block->width = blksiz;
+  block->bounding_box = bbox;
+  block->data = data;
 
-  block.morton_begin = morton;
-  block.morton_end = morton + m_MortonStep;
-  block.origin[0] = x;
-  block.origin[1] = y;
-  block.origin[2] = z;
-  block.width = m_BlockWidth;
-  block.bbox = bbox;
-  block.data.resize(m_NumVoxelsPerBlock);
+  return block;
+}
 
-  for (int i = 0; i < block.data.size(); ++i) {
-    VoxelData& v = block.data[i];
-    v.morton = morton + i;
-    v.flag = 0;
-    v.color = 0;
-  }
-
-  return true;
+void VoxelBlockManager::release(VoxelBlock* block)
+{
+  VoxelBlockNode* node = (VoxelBlockNode*)((void*)block);
+  node->next = m_FreeBlock;
+  m_FreeBlock = node;
 }
 
 }

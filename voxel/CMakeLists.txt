@@ -6,6 +6,18 @@ add_executable(voxel src/main.cpp ${sources} ${headers})
 
 add_subdirectory(trimesh2)
 
+target_compile_options(voxel
+  PUBLIC
+  #$<$<NOT:$<CONFIG:Debug>>:-O2>
+)
+
+target_include_directories(voxel
+  PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/recon
+)
+
 target_link_libraries(voxel
   PUBLIC
   vectormath

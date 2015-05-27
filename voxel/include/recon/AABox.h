@@ -10,7 +10,7 @@ using vectormath::aos::vec3;
 /* Axis-Aligned Bounding Box
  *
  */
-struct AABB {
+struct AABox {
   float minpos[3];
   float maxpos[3];
 
@@ -56,13 +56,13 @@ struct AABB {
   }
 };
 
-inline void AABB::fill(const float* pos)
+inline void AABox::fill(const float* pos)
 {
   memcpy(minpos, pos, sizeof(float)*3);
   memcpy(maxpos, pos, sizeof(float)*3);
 }
 
-inline void AABB::add(const float* pos)
+inline void AABox::add(const float* pos)
 {
   vec3 pt = vec3::load(pos);
   add(pt);

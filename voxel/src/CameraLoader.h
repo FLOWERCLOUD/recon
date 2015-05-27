@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CameraData.h"
-#include "AABB.h"
+#include "Camera.h"
+#include "AABox.h"
 
 #include <QList>
 #include <QString>
@@ -10,8 +10,6 @@
 
 namespace recon {
 
-typedef QList<CameraData> CameraList;
-
 class CameraLoader {
 public:
   CameraLoader();
@@ -19,9 +17,8 @@ public:
 
   bool load_from_nvm(const QString& path);
 
-  const QStringList& image_paths() const;
-  const CameraList& cameras() const;
-  const AABB& feature_boundingbox() const;
+  const QList<Camera>& cameras() const;
+  const AABox& feature_boundingbox() const;
 
   void debug_render_features(const QString& path, int camera_id) const;
 
@@ -32,10 +29,9 @@ private:
   };
 
 private:
-  AABB m_FeatureAABB;
+  AABox m_FeatureAABB;
   QList<FeatureData> m_Features;
-  QStringList m_ImagePaths;
-  CameraList m_Cameras;
+  QList<Camera> m_Cameras;
 };
 
 }
