@@ -2,6 +2,8 @@
 #include "VoxelBlock.h"
 #include <stdio.h>
 #include <QImage>
+#include <trimesh2/TriMesh.h>
+#include <trimesh2/TriMesh_algo.h>
 
 namespace recon {
 
@@ -71,16 +73,61 @@ bool ModelBuilder::execute()
       }
     }
 
-    // debug: check result
-    /*uint64_t count = 0;
-    block->each_voxel([&count](uint64_t morton, VoxelData& voxel) {
-      if (voxel.flag) {
-        count++;
-      }
-    });
-    printf("count = %lld\n", count);*/
-
     // Voxel Coloring
+
+    // debug: export voxels to mesh
+    {
+      uint64_t count = 0;
+      block->each_voxel([&count](uint64_t morton, VoxelData& voxel) {
+        if (voxel.flag) count++;
+      });
+
+      trimesh::TriMesh mesh;
+      mesh.vertices.reserve(8 * count);
+      mesh.faces.reserve(6 * 2 * count);
+
+      uint64_t vid = 0;
+      block->each_voxel([&vid, &mesh, block](uint64_t morton, VoxelData& voxel) {
+        if (voxel.flag) {
+          AABox vbox = block->voxelbox(morton);
+          float x0 = vbox.minpos[0], y0 = vbox.minpos[1], z0 = vbox.minpos[2],
+                x1 = vbox.maxpos[0], y1 = vbox.maxpos[1], z1 = vbox.maxpos[2];
+          trimesh::point pt[] = {
+            { x0, y0, z0 },
+            { x1, y0, z0 },
+            { x0, y1, z0 },
+            { x1, y1, z0 },
+            { x0, y0, z1 },
+            { x1, y0, z1 },
+            { x0, y1, z1 },
+            { x1, y1, z1 }
+          };
+          trimesh::TriMesh::Face face[] = {
+            { vid+0, vid+2, vid+1 },
+            { vid+1, vid+2, vid+3 },
+            { vid+0, vid+6, vid+2 },
+            { vid+0, vid+4, vid+6 },
+            { vid+0, vid+5, vid+4 },
+            { vid+0, vid+1, vid+5 },
+            { vid+1, vid+3, vid+5 },
+            { vid+3, vid+5, vid+7 },
+            { vid+3, vid+2, vid+6 },
+            { vid+3, vid+6, vid+7 },
+            { vid+4, vid+5, vid+7 },
+            { vid+4, vid+7, vid+6 }
+          };
+          vid += 8;
+
+          for (int i = 0; i < 8; ++i)
+            mesh.vertices.push_back(pt[i]);
+          for (int i = 0; i < 12; ++i)
+            mesh.faces.push_back(face[i]);
+        }
+      });
+
+      mesh.need_tstrips();
+      mesh.write(m_MeshPath.toUtf8().constData());
+    }
 
     // Add to octree
 
