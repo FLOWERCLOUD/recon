@@ -31,3 +31,5 @@ set_target_properties(voxel PROPERTIES
   AUTOUIC OFF
   AUTORCC OFF
 )
+# MACOSX_RPATH
+# INSTALL_RPATH
