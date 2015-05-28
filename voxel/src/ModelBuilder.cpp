@@ -26,7 +26,7 @@ ModelBuilder::~ModelBuilder()
 
 bool ModelBuilder::execute()
 {
-  VoxelBlockManager blockman(m_ModelBox, 8, 64);
+  VoxelBlockManager blockman(m_ModelBox, 4, 16);
 
   for (VoxelBlock* block = blockman.generate(); block;) {
     //printf("block (%u, %u, %u)\n", block->origin[0], block->origin[1], block->origin[2]);

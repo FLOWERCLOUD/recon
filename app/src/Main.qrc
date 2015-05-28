@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/">
+    <file>MainWindow.qml</file>
+    <file>MainView.qml</file>
+    <file>ChooseImagePage.qml</file>
+  </qresource>
+</RCC>
