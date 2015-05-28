@@ -24,8 +24,8 @@ elseif(MSVC)
   set(CMAKE_PREFIX_PATH ${QTDIR})
 endif()
 
-set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOMOC OFF)
 set(CMAKE_AUTOUIC OFF)
-set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTORCC OFF)
 
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick)
