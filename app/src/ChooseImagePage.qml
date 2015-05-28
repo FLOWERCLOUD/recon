@@ -14,12 +14,37 @@ Item {
     id: imageListModel
   }
 
+  Rectangle {
+    anchors.centerIn: parent
+    color: "transparent"
+    width: 300
+    height: 200
+    radius: 10
+    border {
+      color: "gray"
+      width: 5
+    }
+    visible: imageListModel.count == 0
+
+    Text {
+      text: qsTr("Drag Images Here")
+      color: "gray"
+      font {
+        family: "Helvetica"
+        pointSize: 30
+        bold: true
+      }
+      anchors.centerIn: parent
+    }
+  }
+
   ScrollView {
     anchors {
       top: parent.top
       left: parent.left
       right: parent.right
       bottom: cellSizeSlider.top
+      margins: 5
     }
 
     GridView {
