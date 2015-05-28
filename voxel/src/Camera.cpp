@@ -9,8 +9,8 @@ struct CameraData : public QSharedData {
   float focal;
   float aspect;
   float distortion[2];
-  float center[4];
-  float orientation[4];
+  float center[3];
+  float rotation[9]; // 3x3 column-major matrix
 
   QString image_path;
   QString mask_path;
@@ -89,19 +89,24 @@ void Camera::setCenter(vec3 pos)
   pos.store(data->center);
 }
 
-quat Camera::orientation() const
+mat3 Camera::rotation() const
 {
-  return quat::load(data->orientation);
+  return mat3::load(data->rotation);
 }
 
-void Camera::setOrientation(quat orient)
+void Camera::setRotation(mat3 rot)
 {
-  orient.store(data->orientation);
+  rot.store(data->rotation);
+}
+
+void Camera::setRotation(quat rot)
+{
+  setRotation((mat3)rot);
 }
 
 mat4 Camera::extrinsic() const
 {
-  mat3 rot = (mat3)orientation();
+  mat3 rot = rotation();
   vec3 pos = center();
   vec3 trans = -(rot * pos);
   return mat4(rot, trans);
@@ -166,7 +171,7 @@ CameraData::CameraData()
   aspect = 0.0f;
   memset(distortion, 0, sizeof(float)*2);
   memset(center, 0, sizeof(float)*3);
-  memset(orientation, 0, sizeof(float)*4);
+  memset(rotation, 0, sizeof(float)*9);
 }
 
 CameraData::CameraData(const CameraData& other)
@@ -176,7 +181,7 @@ CameraData::CameraData(const CameraData& other)
   aspect = other.aspect;
   memcpy(distortion, other.distortion, sizeof(float)*2);
   memcpy(center, other.center, sizeof(float)*3);
-  memcpy(orientation, other.orientation, sizeof(float)*4);
+  memcpy(rotation, other.rotation, sizeof(float)*9);
   image_path = other.image_path;
   mask_path = other.mask_path;
 }

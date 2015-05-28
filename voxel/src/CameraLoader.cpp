@@ -97,7 +97,7 @@ bool CameraLoader::load_from_nvm(const QString& path)
       cam.setAspect(aspect);
       cam.setRadialDistortion(distortion, 0.0f);
       cam.setCenter(vec3::load(center));
-      cam.setOrientation(quat::load(orient));
+      cam.setRotation(quat::load(orient));
       cam.setImagePath(imagename);
       m_Cameras.append(cam);
     }

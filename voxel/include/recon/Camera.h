@@ -40,8 +40,9 @@ public:
   vec3 center() const;
   void setCenter(vec3);
 
-  quat orientation() const;
-  void setOrientation(quat);
+  mat3 rotation() const;
+  void setRotation(mat3);
+  void setRotation(quat);
 
   mat4 extrinsic() const;
   mat4 intrinsicForViewport() const;
