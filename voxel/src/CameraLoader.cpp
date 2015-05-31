@@ -116,6 +116,7 @@ bool CameraLoader::load_from_nvm(const QString& path)
 
   // Feature data
   {
+    bool bbox_first = true;
     float pos[3];
     int rgb[3]; // each component is in range of 0-255
     int num_measurements;
@@ -131,6 +132,13 @@ bool CameraLoader::load_from_nvm(const QString& path)
         stream >> pos2d[0] >> pos2d[1];
       }
 
+      bool visible = true;
+      for (const Camera& cam : m_Cameras) {
+        visible = visible && cam.canSee(vec3::load(pos));
+      }
+      if (!visible)
+        continue;
+
       FeatureData feat;
       feat.pos[0] = pos[0];
       feat.pos[1] = pos[1];
@@ -138,10 +146,12 @@ bool CameraLoader::load_from_nvm(const QString& path)
       feat.color = qRgb(rgb[0], rgb[1], rgb[2]);
       m_Features.append(feat);
 
-      if (i == 0)
+      if (bbox_first) {
         m_FeatureAABB.fill(pos);
-      else
+        bbox_first = false;
+      } else {
         m_FeatureAABB.add(pos);
+      }
     }
   }
 

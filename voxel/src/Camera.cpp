@@ -2,6 +2,8 @@
 #include <QSharedData>
 #include <QString>
 #include <QList>
+#include <math.h>
+#include <stdio.h>
 
 namespace recon {
 
@@ -161,6 +163,15 @@ QString Camera::maskPath() const
 void Camera::setMaskPath(const QString& path)
 {
   data->mask_path = path;
+}
+
+bool Camera::canSee(vec3 pt) const
+{
+  mat4 tfm = intrinsicForViewport() * extrinsic();
+  vec3 pos = proj_vec3(tfm * vec4(pt, 1.0f));
+  //printf("pos.z = %f\n", (float)pos.z());
+  return fabsf((float)pos.x()) <= 1.0f && fabsf((float)pos.y()) <= 1.0f;
+  //return true;
 }
 
 // ====================================================================

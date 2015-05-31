@@ -54,10 +54,14 @@ public:
   QString maskPath() const;
   void setMaskPath(const QString&);
 
+  bool canSee(vec3 pt) const;
+
 private:
   //QSharedDataPointer<CameraData> data;
   QExplicitlySharedDataPointer<CameraData> data;
 };
+
+// TODO: undistortion
 
 }
 
