@@ -1,14 +1,15 @@
 #pragma once
 
 #include "Camera.h"
-#include "AABox.h"
-
+#include <vectormath/utils.h>
 #include <QList>
 #include <QString>
 #include <QStringList>
 #include <QSize>
 
 namespace recon {
+
+using vectormath::utils::AABox;
 
 class CameraLoader {
 public:
@@ -18,7 +19,7 @@ public:
   bool load_from_nvm(const QString& path);
 
   const QList<Camera>& cameras() const;
-  const AABox& feature_boundingbox() const;
+  const AABox& model_boundingbox() const;
 
   void debug_render_features(const QString& path, int camera_id) const;
 
@@ -29,7 +30,7 @@ private:
   };
 
 private:
-  AABox m_FeatureAABB;
+  AABox m_ModelBox;
   QList<FeatureData> m_Features;
   QList<Camera> m_Cameras;
 };

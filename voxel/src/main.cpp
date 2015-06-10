@@ -1,13 +1,22 @@
 #include "CameraLoader.h"
-#include "ModelBuilder.h"
+#include "VoxelModel.h"
+#include "morton_code.h"
+#include <trimesh2/TriMesh.h>
+
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
 #include <QString>
 #include <QtDebug>
 
+#include <QImage>
+
 #include <stdlib.h>
 #include <iostream>
+
+static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
+static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
+static void save_model(const QString& path, const recon::VoxelModel& model);
 
 int main(int argc, char* argv[])
 {
@@ -20,9 +29,6 @@ int main(int argc, char* argv[])
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
-
-  QCommandLineOption writePNGOption(QStringList() << "p" << "png", "Write PNG files", "directory");
-  parser.addOption(writePNGOption);
 
   parser.process(app);
 
@@ -56,33 +62,174 @@ int main(int argc, char* argv[])
   //  qDebug() << "mask path = " << cam.maskPath();
   //}
 
-  recon::ModelBuilder builder(loader.feature_boundingbox(), cameras, "output-octree.moctree", "output-mesh.ply");
-  builder.execute();
-
-/*
-  recon::VoxelBlockGenerator block_gen(loader.feature_boundingbox());
-
-  recon::VoxelBlock block;
-  while (block_gen.generate(block)) {
-    qDebug() << block.origin[0] << ", " << block.origin[1] << ", " << block.origin[2];
-
-    recon::VisualHullParams params;
-    params.cameras = loader.cameras();
-    params.mask_paths = mask_paths;
-    params.block = &block;
-    visualhull(params);
-  }*/
-
-  /*voxel::VoxelColoring coloring(bundlePath);
-  if (coloring.process()) {
-    std::cout << "ok\n";
-  } else {
-    std::cout << "failed\n";
-  }
-
-  if (parser.isSet(writePNGOption)) {
-    coloring.save_to_png_set(parser.value(writePNGOption));
-  }*/
+  recon::VoxelModel model(7, loader.model_boundingbox());
+  visual_hull(model, cameras);
+  plane_sweep(model, cameras);
+  save_model("model.ply", model);
 
   return 0;
+}
+
+static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& cameras)
+{
+  using recon::AABox;
+  using recon::VoxelData;
+  using recon::Camera;
+  using recon::mat4;
+  using recon::vec3;
+  using recon::vec4;
+  using recon::morton_decode;
+
+  // Initialize
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    uint32_t val = 0;
+    val |= VoxelData::VISUALHULL_FLAG;
+    model[m].flag = val;
+  }
+
+  // Visual Hull
+  for (Camera cam : cameras) {
+    QImage mask = QImage(cam.maskPath());
+
+    mat4 extrinsic = cam.extrinsic();
+    mat4 intrinsic = cam.intrinsicForImage(mask.width(), mask.height());
+    mat4 transform = intrinsic * extrinsic;
+
+    for (uint64_t m = 0; m < model.size(); ++m) {
+      VoxelData& voxel = model[m];
+      AABox vbox = model.boundingbox(m);
+      vec3 pt = vbox.center();
+      pt = proj_vec3(transform * vec4(pt, 1.0f));
+
+      QPoint pt2d = QPoint((float)pt.x(), (float)pt.y());
+      if (mask.valid(pt2d)) {
+        if (qGray(mask.pixel(pt2d)) < 10) {
+          voxel.flag &= ~VoxelData::VISUALHULL_FLAG; // mark invisible
+          // mark neighborhood
+          uint32_t x, y, z;
+          morton_decode(m, x, y, z);
+          VoxelData* neighbor;
+
+          if ((neighbor = model.get(x+1, y, z))) {
+            neighbor->flag |= VoxelData::SURFACE_FLAG;
+          }
+          if ((neighbor = model.get(x-1, y, z))) {
+            neighbor->flag |= VoxelData::SURFACE_FLAG;
+          }
+          if ((neighbor = model.get(x, y+1, z))) {
+            neighbor->flag |= VoxelData::SURFACE_FLAG;
+          }
+          if ((neighbor = model.get(x, y-1, z))) {
+            neighbor->flag |= VoxelData::SURFACE_FLAG;
+          }
+          if ((neighbor = model.get(x, y, z+1))) {
+            neighbor->flag |= VoxelData::SURFACE_FLAG;
+          }
+          if ((neighbor = model.get(x, y, z-1))) {
+            neighbor->flag |= VoxelData::SURFACE_FLAG;
+          }
+        }
+      } else {
+        voxel.flag &= ~VoxelData::VISUALHULL_FLAG;
+      }
+    }
+  }
+
+  // Finalize
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    if ((model[m].flag & VoxelData::VISUALHULL_FLAG) == 0) {
+      model[m].flag = 0;
+    }
+  }
+}
+
+static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& cameras)
+{
+  // from up to down
+  // TODO
+  /*
+    for plane from -y to y
+      create queue from all surface voxel on the plane
+      while queue not empty
+        voxel = dequeue(queue)
+        if voxel is not photo-consistent
+          voxel.flag = 0
+          mark neighbors as surface voxels
+          enqueue(queue, newly marked surface voxels)
+        endif
+      endwhile
+    endfor
+
+    function check-photo-consistency(voxel, cameras)
+      
+    endfunction
+  */
+}
+
+static void save_model(const QString& path, const recon::VoxelModel& model)
+{
+  using recon::AABox;
+  using recon::VoxelData;
+
+  uint64_t count = 0;
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    if ((model[m].flag & VoxelData::SURFACE_FLAG) != 0)
+      count++;
+  }
+
+  trimesh::TriMesh mesh;
+  mesh.vertices.reserve(8 * count);
+  mesh.faces.reserve(6 * 2 * count);
+
+  uint64_t vid = 0;
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    VoxelData v = model[m];
+    if ((v.flag & VoxelData::SURFACE_FLAG) == 0)
+      continue;
+
+    AABox vbox = model.boundingbox(m);
+    float x0, y0, z0, x1, y1, z1;
+
+    x0 = (float)vbox.minpos.x();
+    y0 = (float)vbox.minpos.y();
+    z0 = (float)vbox.minpos.z();
+    x1 = (float)vbox.maxpos.x();
+    y1 = (float)vbox.maxpos.y();
+    z1 = (float)vbox.maxpos.z();
+
+    trimesh::point pt[] = {
+      { x0, y0, z0 },
+      { x1, y0, z0 },
+      { x0, y1, z0 },
+      { x1, y1, z0 },
+      { x0, y0, z1 },
+      { x1, y0, z1 },
+      { x0, y1, z1 },
+      { x1, y1, z1 }
+    };
+    trimesh::TriMesh::Face face[] = {
+      { vid+0, vid+2, vid+1 },
+      { vid+1, vid+2, vid+3 },
+      { vid+0, vid+6, vid+2 },
+      { vid+0, vid+4, vid+6 },
+      { vid+0, vid+5, vid+4 },
+      { vid+0, vid+1, vid+5 },
+      { vid+1, vid+3, vid+5 },
+      { vid+3, vid+7, vid+5 },
+      { vid+3, vid+2, vid+6 },
+      { vid+3, vid+6, vid+7 },
+      { vid+4, vid+5, vid+7 },
+      { vid+4, vid+7, vid+6 }
+    };
+    vid += 8;
+
+    for (int i = 0; i < 8; ++i) {
+      mesh.vertices.push_back(pt[i]);
+    }
+    for (int i = 0; i < 12; ++i)
+      mesh.faces.push_back(face[i]);
+  }
+
+  mesh.need_tstrips();
+  mesh.write(path.toUtf8().constData());
 }

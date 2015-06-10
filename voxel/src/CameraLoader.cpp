@@ -26,9 +26,9 @@ const QList<Camera>& CameraLoader::cameras() const
   return m_Cameras;
 }
 
-const AABox& CameraLoader::feature_boundingbox() const
+const AABox& CameraLoader::model_boundingbox() const
 {
-  return m_FeatureAABB;
+  return m_ModelBox;
 }
 
 bool CameraLoader::load_from_nvm(const QString& path)
@@ -147,10 +147,10 @@ bool CameraLoader::load_from_nvm(const QString& path)
       m_Features.append(feat);
 
       if (bbox_first) {
-        m_FeatureAABB.fill(pos);
+        m_ModelBox = AABox(vec3::load(pos));
         bbox_first = false;
       } else {
-        m_FeatureAABB.add(pos);
+        m_ModelBox.add(vec3::load(pos));
       }
     }
   }
