@@ -106,6 +106,11 @@ void Camera::setRotation(quat rot)
   setRotation((mat3)rot);
 }
 
+vec3 Camera::direction() const
+{
+  return rotate(rotation(), vec3(0.0f, 0.0f, 1.0f));
+}
+
 mat4 Camera::extrinsic() const
 {
   mat3 rot = rotation();

@@ -44,6 +44,8 @@ public:
   void setRotation(mat3);
   void setRotation(quat);
 
+  vec3 direction() const;
+
   mat4 extrinsic() const;
   mat4 intrinsicForViewport() const;
   mat4 intrinsicForImage(int width, int height) const;
