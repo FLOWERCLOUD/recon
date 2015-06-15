@@ -1,12 +1,17 @@
 #pragma once
 
 #include "morton_code.h"
-#include <vectormath/utils.h>
+#include <vectormath.h>
+#include <vectormath/aos/utils/aabox.h>
 #include <QtGlobal>
 
 namespace recon {
 
-using namespace vectormath::utils;
+using vectormath::aos::vec3;
+using vectormath::aos::vec4;
+using vectormath::aos::mat3;
+using vectormath::aos::mat4;
+using vectormath::aos::utils::AABox;
 
 struct VoxelData {
   enum Flag {

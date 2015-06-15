@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Camera.h"
-#include <vectormath/utils.h>
+#include <vectormath/aos/utils/aabox.h>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -9,7 +9,7 @@
 
 namespace recon {
 
-using vectormath::utils::AABox;
+using vectormath::aos::utils::AABox;
 
 class CameraLoader {
 public:

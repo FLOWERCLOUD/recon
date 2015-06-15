@@ -146,6 +146,8 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& cameras)
 {
   using recon::Camera;
+  using recon::VoxelData;
+  using recon::vec3;
 
   // from up to down
   // NOTE: consider only one direction sweep -y->+y, -x->+x
@@ -167,7 +169,7 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
         if (flag[z])
           continue;
         VoxelData* voxel = model.get(x, y, z);
-        if (voxel & VoxelData::SURFACE_FLAG) {
+        if (voxel->flag & VoxelData::SURFACE_FLAG) {
           QList<uint32_t> pixels;
           QList<uint32_t> pixbounds;
 
@@ -177,6 +179,7 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
           }
 
           // TODO: check photo consistency
+
 
         }
       }
