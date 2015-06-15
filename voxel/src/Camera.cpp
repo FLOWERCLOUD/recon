@@ -2,6 +2,7 @@
 #include <QSharedData>
 #include <QString>
 #include <QList>
+#include <QImageReader>
 #include <math.h>
 #include <stdio.h>
 
@@ -158,6 +159,18 @@ QString Camera::imagePath() const
 void Camera::setImagePath(const QString& path)
 {
   data->image_path = path;
+}
+
+int Camera::imageWidth() const
+{
+  QImageReader reader(imagePath());
+  return reader.size().width();
+}
+
+int Camera::imageHeight() const
+{
+  QImageReader reader(imagePath());
+  return reader.size().height();
 }
 
 QString Camera::maskPath() const

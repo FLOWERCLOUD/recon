@@ -17,6 +17,7 @@
 static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
 static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
 static void save_model(const QString& path, const recon::VoxelModel& model);
+static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& vcolor);
 
 int main(int argc, char* argv[])
 {
@@ -80,6 +81,8 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
   using recon::vec4;
   using recon::morton_decode;
 
+  qDebug() << "visual_hull: initialize";
+
   // Initialize
   for (uint64_t m = 0; m < model.size(); ++m) {
     uint32_t val = 0;
@@ -89,6 +92,7 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 
   // Visual Hull
   for (Camera cam : cameras) {
+    qDebug() << "visual_hull: camera iteration";
     QImage mask = QImage(cam.maskPath());
 
     mat4 extrinsic = cam.extrinsic();
@@ -97,6 +101,10 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 
     for (uint64_t m = 0; m < model.size(); ++m) {
       VoxelData& voxel = model[m];
+      if ((voxel.flag & VoxelData::VISUALHULL_FLAG) == 0) {
+        continue;
+      }
+
       AABox vbox = model.boundingbox(m);
       vec3 pt = vbox.center();
       pt = proj_vec3(transform * vec4(pt, 1.0f));
@@ -135,6 +143,8 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
     }
   }
 
+  qDebug() << "visual_hull: finalize";
+
   // Finalize
   for (uint64_t m = 0; m < model.size(); ++m) {
     if ((model[m].flag & VoxelData::VISUALHULL_FLAG) == 0) {
@@ -148,6 +158,9 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
   using recon::Camera;
   using recon::VoxelData;
   using recon::vec3;
+  using recon::mat4;
+  using recon::vec4;
+  using recon::AABox;
 
   // from up to down
   // NOTE: consider only one direction sweep -y->+y, -x->+x
@@ -162,47 +175,134 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
     }
   }
 
+  Camera cam = pxcams[0];
+  QImage image = QImage(cam.imagePath());
+
   for (uint32_t y = 0; y < 128; ++y) {
     uint8_t flag[128] = {0};
     for (uint32_t x = 0; x < 128; ++x) {
       for (uint32_t z = 0; z < 128; ++z) {
         if (flag[z])
           continue;
-        VoxelData* voxel = model.get(x, y, z);
-        if (voxel->flag & VoxelData::SURFACE_FLAG) {
-          QList<uint32_t> pixels;
-          QList<uint32_t> pixbounds;
+
+        uint32_t morton = recon::morton_encode(x, y, z);
+        VoxelData& voxel = model[morton];
+        if ((voxel.flag & VoxelData::SURFACE_FLAG) == 0)
+          continue;
+
+        AABox vbox = model.boundingbox(morton);
+        //Camera cam = pxcams[0]; // TODO
+        {
+          int width = image.width(), height = image.height();
+
+          // project 8 corners of voxel onto the image, compute the bounding rectangle
+          mat4 proj = cam.intrinsicForImage(width, height) * cam.extrinsic();
+          vec3 minpt, maxpt;
+          vec3 corners[8] = {
+            vbox.corner0(),
+            vbox.corner1(),
+            vbox.corner2(),
+            vbox.corner3(),
+            vbox.corner4(),
+            vbox.corner5(),
+            vbox.corner6(),
+            vbox.corner7()
+          };
+          maxpt = minpt = proj_vec3(proj * vec4(corners[0], 1.0f));
+          for (int i = 1; i < 8; ++i) {
+            vec3 pt = proj_vec3(proj * vec4(corners[i], 1.0f));
+            minpt = min(minpt, pt);
+            maxpt = max(maxpt, pt);
+          }
+          clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+          clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+
+          // compute color
+          vec3 color = vec3::zero();
+          float count = 0.0f;
+          for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
+            for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
+              QRgb c = image.pixel(px, py);
+              color = color + vec3(qRed(c), qGreen(c), qBlue(c));
+              count += 1.0f;
+            }
+          }
+          color = color / count;
+
+          voxel.color = qRgb((float)color.x(), (float)color.y(), (float)color.z());
+        }
+
+        /*
+        if (voxel.flag & VoxelData::SURFACE_FLAG) {
+          AABox vbox = model.boundingbox(morton);
+          //QList<uint32_t> pixels;
+          //QList<uint32_t> pixbounds;
 
           for (Camera cam: pxcams) {
+            //QImage image = QImage(cam.imagePath());
+            int width = cam.imageWidth(), height = cam.imageHeight();
+
             // project 8 corners of voxel onto the image, compute the bounding rectangle
-            // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
+            mat4 proj = cam.intrinsicForImage(width, height) * cam.extrinsic();
+            vec3 minpt, maxpt;
+            vec3 corners[8] = {
+              vbox.corner0(),
+              vbox.corner1(),
+              vbox.corner2(),
+              vbox.corner3(),
+              vbox.corner4(),
+              vbox.corner5(),
+              vbox.corner6(),
+              vbox.corner7()
+            };
+            maxpt = minpt = proj_vec3(proj * vec4(corners[0], 1.0f));
+            for (int i = 1; i < 8; ++i) {
+              vec3 pt = proj_vec3(proj * vec4(corners[i], 1.0f));
+              minpt = min(minpt, pt);
+              maxpt = max(maxpt, pt);
+            }
+            clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+            clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+
+            // copy pixels
+            //for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
+            //  for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
+            //    QRgb color = image.pixel(px, py);
+            //    pixels.push_back(color);
+            //  }
+            //}
+
+            // mark boundings
+            //if (pixbounds.empty()) {
+            //  if (!pixels.empty()) {
+            //    pixbounds.push_back(pixels.size());
+            //  }
+            //} else {
+            //  if (pixels.size() != pixbounds.back()) {
+            //    pixbounds.push_back(pixels.size());
+            //  }
+            //}
           }
 
-          // TODO: check photo consistency
+          // photo-consistency check
+          //uint32_t vcolor;
+          //if (check_photo_consistency(pixels, pixbounds, vcolor)) {
+          //  // mark valid
+          //} else {
+          //  // carve it away
+          //}
 
-
+          // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
         }
+        */
       }
     }
   }
-  // TODO
-  /*
-    for plane from -y to y
-      create queue from all surface voxel on the plane
-      while queue not empty
-        voxel = dequeue(queue)
-        if voxel is not photo-consistent
-          voxel.flag = 0
-          mark neighbors as surface voxels
-          enqueue(queue, newly marked surface voxels)
-        endif
-      endwhile
-    endfor
+}
 
-    function check-photo-consistency(voxel, cameras)
-
-    endfunction
-  */
+static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& vcolor)
+{
+  return true;
 }
 
 static void save_model(const QString& path, const recon::VoxelModel& model)
@@ -218,6 +318,7 @@ static void save_model(const QString& path, const recon::VoxelModel& model)
 
   trimesh::TriMesh mesh;
   mesh.vertices.reserve(8 * count);
+  mesh.colors.reserve(8 * count);
   mesh.faces.reserve(6 * 2 * count);
 
   uint64_t vid = 0;
@@ -262,8 +363,11 @@ static void save_model(const QString& path, const recon::VoxelModel& model)
     };
     vid += 8;
 
+    trimesh::Color vcolor(qRed(v.color), qGreen(v.color), qBlue(v.color));
+
     for (int i = 0; i < 8; ++i) {
       mesh.vertices.push_back(pt[i]);
+      mesh.colors.push_back(vcolor);
     }
     for (int i = 0; i < 12; ++i)
       mesh.faces.push_back(face[i]);

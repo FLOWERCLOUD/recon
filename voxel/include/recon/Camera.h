@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vectormath.h>
+#include <vectormath/aos/utils/aabox.h>
 #include <QSharedDataPointer>
 #include <QString>
 
@@ -11,6 +12,7 @@ using vectormath::aos::vec4;
 using vectormath::aos::quat;
 using vectormath::aos::mat3;
 using vectormath::aos::mat4;
+using vectormath::aos::utils::AABox;
 
 struct CameraData;
 
@@ -52,6 +54,9 @@ public:
 
   QString imagePath() const;
   void setImagePath(const QString&);
+
+  int imageWidth() const;
+  int imageHeight() const;
 
   QString maskPath() const;
   void setMaskPath(const QString&);
