@@ -161,6 +161,7 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
   using recon::mat4;
   using recon::vec4;
   using recon::AABox;
+  using recon::Ray;
 
   // from up to down
   // NOTE: consider only one direction sweep -y->+y, -x->+x
@@ -185,7 +186,7 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
         if (flag[z])
           continue;
 
-        uint32_t morton = recon::morton_encode(x, y, z);
+        uint64_t morton = recon::morton_encode(x, y, z);
         VoxelData& voxel = model[morton];
         if ((voxel.flag & VoxelData::SURFACE_FLAG) == 0)
           continue;
@@ -194,6 +195,17 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
         //Camera cam = pxcams[0]; // TODO
         {
           int width = image.width(), height = image.height();
+
+          uint64_t hitmorton;
+          if (model.intersects(hitmorton, Ray::from_points(cam.center(), vbox.center()))) {
+            if (hitmorton != morton) {
+              // TODO
+              qDebug() << "WTF";
+              continue; // skip voxel
+            }
+          } else {
+            qDebug() << "Fuck";
+          }
 
           // project 8 corners of voxel onto the image, compute the bounding rectangle
           mat4 proj = cam.intrinsicForImage(width, height) * cam.extrinsic();

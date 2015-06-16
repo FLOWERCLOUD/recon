@@ -123,11 +123,14 @@ inline bool VoxelModel::intersects(uint64_t& morton, const Ray& ray) const
   vec3 vextent = vbox.extent();
 
   if (adx >= ady && adx >= adz) {
+    qDebug("X-AXIS");
     // along x-axis
     float t0 = ray.proj_x((float)vbox.minpos.x());
     float t1 = ray.proj_x((float)vbox.maxpos.x());
-    if ((t0 < 0.0f && t1 < 0.0f))
+    if ((t0 < 0.0f && t1 < 0.0f)) {
+      qDebug("out of sight");
       return false;
+    }
     if (t0 > t1)
       std::swap(t0, t1);
     float tstep = (t1 - t0) / (float)m_Width;
@@ -151,11 +154,67 @@ inline bool VoxelModel::intersects(uint64_t& morton, const Ray& ray) const
       }
     }
   } else if (ady >= adz) {
+    qDebug("Y-AXIS");
     // along y-axis
+    float t0 = ray.proj_y((float)vbox.minpos.y());
+    float t1 = ray.proj_y((float)vbox.maxpos.y());
+    if ((t0 < 0.0f && t1 < 0.0f)) {
+      qDebug("out of sight");
+      return false;
+    }
+    if (t0 > t1)
+      std::swap(t0, t1);
+    float tstep = (t1 - t0) / (float)m_Height;
 
+    t0 = fmaxf(t0, 0.0f);
+    for (; t0 < t1; t0 += tstep) {
+      vec3 pt = ray[t0];
+      int ix = (float)pt.x() / (float)vextent.x() * (float)m_Width;
+      int iy = (float)pt.y() / (float)vextent.y() * (float)m_Height;
+      int iz = (float)pt.z() / (float)vextent.z() * (float)m_Depth;
+      if (ix < 0 || iy < 0 || iz < 0)
+        continue;
+      if (ix >= m_Width || iy >= m_Height || iz >= m_Depth)
+        continue;
+
+      uint64_t m = morton_encode(ix, iy, iz);
+      const VoxelData& voxel = operator[](m);
+      if (voxel.flag) {
+        morton = m;
+        return true;
+      }
+    }
   } else {
+    qDebug("Z-AXIS");
     // along z-axis
+    float t0 = ray.proj_z((float)vbox.minpos.z());
+    float t1 = ray.proj_z((float)vbox.maxpos.z());
+    if ((t0 < 0.0f && t1 < 0.0f)) {
+      qDebug("out of sight");
+      return false;
+    }
+    if (t0 > t1)
+      std::swap(t0, t1);
+    float tstep = (t1 - t0) / (float)m_Depth;
 
+    t0 = fmaxf(t0, 0.0f);
+    for (; t0 < t1; t0 += tstep) {
+      vec3 pt = ray[t0];
+      int ix = (float)pt.x() / (float)vextent.x() * (float)m_Width;
+      int iy = (float)pt.y() / (float)vextent.y() * (float)m_Height;
+      int iz = (float)pt.z() / (float)vextent.z() * (float)m_Depth;
+      if (ix < 0 || iy < 0 || iz < 0)
+        continue;
+      if (ix >= m_Width || iy >= m_Height || iz >= m_Depth)
+        continue;
+
+      uint64_t m = morton_encode(ix, iy, iz);
+      const VoxelData& voxel = operator[](m);
+      if (voxel.flag) {
+        morton = m;
+        return true;
+      }
+    }
   }
 
   return false;
