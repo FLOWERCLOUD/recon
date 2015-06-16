@@ -23,7 +23,7 @@ VoxelModel::VoxelModel(uint32_t level, const AABox& bbox)
   // compute m_VoxelBox
   {
     float siz[3], vsiz;
-    m_ModelBox.size().store(siz);
+    m_ModelBox.extent().store(siz);
     vsiz = fmaxf(siz[0], fmaxf(siz[1], siz[2]));
 
     vec3 start = m_ModelBox.minpos, extent = vec3(vsiz, vsiz, vsiz);

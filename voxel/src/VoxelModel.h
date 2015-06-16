@@ -3,6 +3,8 @@
 #include "morton_code.h"
 #include <vectormath.h>
 #include <vectormath/aos/utils/aabox.h>
+#include <vectormath/aos/utils/ray.h>
+#include <utility>
 #include <QtGlobal>
 
 namespace recon {
@@ -12,6 +14,7 @@ using vectormath::aos::vec4;
 using vectormath::aos::mat3;
 using vectormath::aos::mat4;
 using vectormath::aos::utils::AABox;
+using vectormath::aos::utils::Ray;
 
 struct VoxelData {
   enum Flag {
@@ -40,6 +43,8 @@ public:
 
   //static uint64_t encode(uint32_t, uint32_t, uint32_t);
   //static void decode(uint64_t, uint32_t&, uint32_t&, uint32_t&);
+
+  inline bool intersects(uint64_t& morton, const Ray&) const;
 
 private:
   uint32_t m_Level;
@@ -94,18 +99,66 @@ inline AABox VoxelModel::boundingbox(uint64_t morton) const
 
   AABox vbox = m_VoxelBox;
 
-  vec3 minpt = vec3{
-    (float)lerp(fx0, vbox.minpos, vbox.maxpos).x(),
-    (float)lerp(fy0, vbox.minpos, vbox.maxpos).y(),
-    (float)lerp(fz0, vbox.minpos, vbox.maxpos).z()
+  return AABox{
+    vbox.lerp(fx0, fy0, fz0),
+    vbox.lerp(fx1, fy1, fz1)
   };
-  vec3 maxpt = vec3{
-    (float)lerp(fx1, vbox.minpos, vbox.maxpos).x(),
-    (float)lerp(fy1, vbox.minpos, vbox.maxpos).y(),
-    (float)lerp(fz1, vbox.minpos, vbox.maxpos).z()
-  };
+}
 
-  return AABox(minpt, maxpt);
+inline bool VoxelModel::intersects(uint64_t& morton, const Ray& ray) const
+{
+  // Use Digital Differential Analysis
+  //float rx0, ry0 rz0, dx, dy, dz, adx, ady, adz;
+  //rx0 = (float)ray.startpos.x();
+  //ry0 = (float)ray.startpos.y();
+  //rz0 = (float)ray.startpos.z();
+  float dx = (float)ray.direction.x();
+  float dy = (float)ray.direction.y();
+  float dz = (float)ray.direction.z();
+  float adx = fabsf(dx);
+  float ady = fabsf(dy);
+  float adz = fabsf(dz);
+
+  AABox vbox = m_VoxelBox;
+  vec3 vextent = vbox.extent();
+
+  if (adx >= ady && adx >= adz) {
+    // along x-axis
+    float t0 = ray.proj_x((float)vbox.minpos.x());
+    float t1 = ray.proj_x((float)vbox.maxpos.x());
+    if ((t0 < 0.0f && t1 < 0.0f))
+      return false;
+    if (t0 > t1)
+      std::swap(t0, t1);
+    float tstep = (t1 - t0) / (float)m_Width;
+
+    t0 = fmaxf(t0, 0.0f);
+    for (; t0 < t1; t0 += tstep) {
+      vec3 pt = ray[t0];
+      int ix = (float)pt.x() / (float)vextent.x() * (float)m_Width;
+      int iy = (float)pt.y() / (float)vextent.y() * (float)m_Height;
+      int iz = (float)pt.z() / (float)vextent.z() * (float)m_Depth;
+      if (ix < 0 || iy < 0 || iz < 0)
+        continue;
+      if (ix >= m_Width || iy >= m_Height || iz >= m_Depth)
+        continue;
+
+      uint64_t m = morton_encode(ix, iy, iz);
+      const VoxelData& voxel = operator[](m);
+      if (voxel.flag) {
+        morton = m;
+        return true;
+      }
+    }
+  } else if (ady >= adz) {
+    // along y-axis
+
+  } else {
+    // along z-axis
+
+  }
+
+  return false;
 }
 
 }
