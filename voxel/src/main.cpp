@@ -199,12 +199,17 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
           uint64_t hitmorton;
           if (model.intersects(hitmorton, Ray::from_points(cam.center(), vbox.center()))) {
             if (hitmorton != morton) {
-              // TODO
-              qDebug() << "WTF";
-              continue; // skip voxel
+              // Tolerance
+              uint32_t ix, iy, iz;
+              recon::morton_decode(hitmorton, ix, iy, iz);
+              int dx, dy, dz;
+              dx = abs((int)ix - (int)x);
+              dy = abs((int)iy - (int)y);
+              dz = abs((int)iz - (int)z);
+              if ((dx + dy + dz) > 1) {
+                continue; // skip voxel
+              }
             }
-          } else {
-            qDebug() << "Fuck";
           }
 
           // project 8 corners of voxel onto the image, compute the bounding rectangle
