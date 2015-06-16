@@ -21,6 +21,7 @@ struct VoxelData {
   enum Flag {
     VISUALHULL_FLAG = 0x1,
     SURFACE_FLAG = 0x2,
+    VOXELCOLOR_1_FLAG = 0x4,
   };
 
   uint32_t flag;

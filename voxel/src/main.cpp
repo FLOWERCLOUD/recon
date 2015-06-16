@@ -167,17 +167,24 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
   // NOTE: consider only one direction sweep -y->+y, -x->+x
 
   // select cameras look at positive X direction
-  QList<Camera> pxcams;
+  /*QList<Camera> pxcams;
   pxcams.reserve(cameras.size());
   for (Camera cam : cameras) {
     vec3 dir = cam.direction();
     if ((float)dir.x() > 0.1f) {
       pxcams.append(cam);
     }
+  }*/
+
+  QList<Camera> pxcams = cameras;
+
+  QList<QImage> images;
+  images.reserve(pxcams.size());
+  for (Camera cam : pxcams) {
+    images.append(QImage(cam.imagePath()));
   }
 
-  Camera cam = pxcams[0];
-  QImage image = QImage(cam.imagePath());
+  int cam_n = pxcams.size();
 
   for (uint32_t y = 0; y < 128; ++y) {
     uint8_t flag[128] = {0};
@@ -192,8 +199,11 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
           continue;
 
         AABox vbox = model.boundingbox(morton);
-        //Camera cam = pxcams[0]; // TODO
-        {
+
+        for (int cam_id = 0; cam_id < cam_n; ++cam_id) {
+          Camera cam = pxcams[cam_id];
+          QImage image = images[cam_id];
+
           int width = image.width(), height = image.height();
 
           uint64_t hitmorton;
@@ -247,72 +257,37 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
           color = color / count;
 
           voxel.color = qRgb((float)color.x(), (float)color.y(), (float)color.z());
+          voxel.flag |= VoxelData::VOXELCOLOR_1_FLAG;
+
+          /*
+          TODO
+          update_flag = true
+          while update_flag == true do
+            update_flag = false
+            for each voxel do
+              continue if voxel is not surface voxel
+              for each camera do
+                continue if voxel is already computed with the camera
+                check photo consistency
+                if not consistent then
+                  carve the voxel (its flag becomes zero)
+                  mark neighboring voxels as surface voxels
+                  update_flag = true
+                endif
+              end
+            end
+          done
+          */
         }
-
-        /*
-        if (voxel.flag & VoxelData::SURFACE_FLAG) {
-          AABox vbox = model.boundingbox(morton);
-          //QList<uint32_t> pixels;
-          //QList<uint32_t> pixbounds;
-
-          for (Camera cam: pxcams) {
-            //QImage image = QImage(cam.imagePath());
-            int width = cam.imageWidth(), height = cam.imageHeight();
-
-            // project 8 corners of voxel onto the image, compute the bounding rectangle
-            mat4 proj = cam.intrinsicForImage(width, height) * cam.extrinsic();
-            vec3 minpt, maxpt;
-            vec3 corners[8] = {
-              vbox.corner0(),
-              vbox.corner1(),
-              vbox.corner2(),
-              vbox.corner3(),
-              vbox.corner4(),
-              vbox.corner5(),
-              vbox.corner6(),
-              vbox.corner7()
-            };
-            maxpt = minpt = proj_vec3(proj * vec4(corners[0], 1.0f));
-            for (int i = 1; i < 8; ++i) {
-              vec3 pt = proj_vec3(proj * vec4(corners[i], 1.0f));
-              minpt = min(minpt, pt);
-              maxpt = max(maxpt, pt);
-            }
-            clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
-            clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
-
-            // copy pixels
-            //for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
-            //  for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
-            //    QRgb color = image.pixel(px, py);
-            //    pixels.push_back(color);
-            //  }
-            //}
-
-            // mark boundings
-            //if (pixbounds.empty()) {
-            //  if (!pixels.empty()) {
-            //    pixbounds.push_back(pixels.size());
-            //  }
-            //} else {
-            //  if (pixels.size() != pixbounds.back()) {
-            //    pixbounds.push_back(pixels.size());
-            //  }
-            //}
-          }
-
-          // photo-consistency check
-          //uint32_t vcolor;
-          //if (check_photo_consistency(pixels, pixbounds, vcolor)) {
-          //  // mark valid
-          //} else {
-          //  // carve it away
-          //}
-
-          // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
-        }
-        */
+        // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
       }
+    }
+  }
+
+  // Finalize
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    if ((model[m].flag & VoxelData::VOXELCOLOR_1_FLAG) == 0) {
+      model[m].flag = 0;
     }
   }
 }
