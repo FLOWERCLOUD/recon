@@ -163,68 +163,33 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
   using recon::AABox;
   using recon::Ray;
 
-  // from up to down
-  // NOTE: consider only one direction sweep -y->+y, -x->+x
-
-  // select cameras look at positive X direction
-  /*QList<Camera> pxcams;
-  pxcams.reserve(cameras.size());
-  for (Camera cam : cameras) {
-    vec3 dir = cam.direction();
-    if ((float)dir.x() > 0.1f) {
-      pxcams.append(cam);
-    }
-  }*/
-
-  QList<Camera> pxcams = cameras;
-
   QList<QImage> images;
-  images.reserve(pxcams.size());
-  for (Camera cam : pxcams) {
+  images.reserve(cameras.size());
+  for (Camera cam : cameras) {
     images.append(QImage(cam.imagePath()));
   }
+  int cam_n = cameras.size();
 
-  int cam_n = pxcams.size();
+  for (int iterations = 1; iterations; --iterations) {
+    for (uint64_t morton = 0, morton_count = model.size(); morton < morton_count; ++morton) {
+      VoxelData& voxel = model[morton];
+      if ((voxel.flag & VoxelData::SURFACE_FLAG) == 0)
+        continue;
 
-  for (uint32_t y = 0; y < 128; ++y) {
-    uint8_t flag[128] = {0};
-    for (uint32_t x = 0; x < 128; ++x) {
-      for (uint32_t z = 0; z < 128; ++z) {
-        if (flag[z])
+      for (int cam_id = 0; cam_id < cam_n; ++cam_id) {
+        Camera cam = cameras[cam_id];
+        QImage image = images[cam_id];
+
+        if (!model.check_visibility(cam.center(), morton)) {
           continue;
+        }
 
-        uint64_t morton = recon::morton_encode(x, y, z);
-        VoxelData& voxel = model[morton];
-        if ((voxel.flag & VoxelData::SURFACE_FLAG) == 0)
-          continue;
-
-        AABox vbox = model.boundingbox(morton);
-
-        for (int cam_id = 0; cam_id < cam_n; ++cam_id) {
-          Camera cam = pxcams[cam_id];
-          QImage image = images[cam_id];
-
+        // project 8 corners of voxel onto the image, compute the bounding rectangle
+        vec3 minpt, maxpt;
+        {
           int width = image.width(), height = image.height();
-
-          uint64_t hitmorton;
-          if (model.intersects(hitmorton, Ray::from_points(cam.center(), vbox.center()))) {
-            if (hitmorton != morton) {
-              // Tolerance
-              uint32_t ix, iy, iz;
-              recon::morton_decode(hitmorton, ix, iy, iz);
-              int dx, dy, dz;
-              dx = abs((int)ix - (int)x);
-              dy = abs((int)iy - (int)y);
-              dz = abs((int)iz - (int)z);
-              if ((dx + dy + dz) > 1) {
-                continue; // skip voxel
-              }
-            }
-          }
-
-          // project 8 corners of voxel onto the image, compute the bounding rectangle
           mat4 proj = cam.intrinsicForImage(width, height) * cam.extrinsic();
-          vec3 minpt, maxpt;
+          AABox vbox = model.boundingbox(morton);
           vec3 corners[8] = {
             vbox.corner0(),
             vbox.corner1(),
@@ -243,53 +208,61 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
           }
           clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
           clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
-
-          // compute color
-          vec3 color = vec3::zero();
-          float count = 0.0f;
-          for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
-            for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
-              QRgb c = image.pixel(px, py);
-              color = color + vec3(qRed(c), qGreen(c), qBlue(c));
-              count += 1.0f;
-            }
-          }
-          color = color / count;
-
-          voxel.color = qRgb((float)color.x(), (float)color.y(), (float)color.z());
-          voxel.flag |= VoxelData::VOXELCOLOR_1_FLAG;
-
-          /*
-          TODO
-          update_flag = true
-          while update_flag == true do
-            update_flag = false
-            for each voxel do
-              continue if voxel is not surface voxel
-              for each camera do
-                continue if voxel is already computed with the camera
-                check photo consistency
-                if not consistent then
-                  carve the voxel (its flag becomes zero)
-                  mark neighboring voxels as surface voxels
-                  update_flag = true
-                endif
-              end
-            end
-          done
-          */
         }
-        // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
+
+        // compute color
+        vec3 color = vec3::zero();
+        float count = 0.0f;
+        for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
+          for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
+            QRgb c = image.pixel(px, py);
+            color = color + vec3(qRed(c), qGreen(c), qBlue(c));
+            count += 1.0f;
+          }
+        }
+        color = color / count;
+        uint32_t ucolor = qRgb((float)color.x(), (float)color.y(), (float)color.z());
+        float udepth = 1.0f / (float)maxpt.z();
+
+        //if ((voxel.flag & VoxelData::VOXELCOLOR_1_FLAG) == 0) {
+          voxel.color_depth = udepth;
+          voxel.color = ucolor;
+          voxel.flag |= VoxelData::VOXELCOLOR_1_FLAG;
+        //} else if (voxel.color_depth > udepth){
+        //  voxel.color_depth = udepth;
+        //  voxel.color = ucolor;
+        //}
       }
     }
   }
 
+  /*
+  TODO
+  update_flag = true
+  while update_flag == true do
+    update_flag = false
+    for each voxel do
+      continue if voxel is not surface voxel
+      for each camera do
+        continue if voxel is already computed with the camera
+        check photo consistency
+        if not consistent then
+          carve the voxel (its flag becomes zero)
+          mark neighboring voxels as surface voxels
+          update_flag = true
+        endif
+      end
+    end
+  done
+  */
+  // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
+
   // Finalize
-  for (uint64_t m = 0; m < model.size(); ++m) {
-    if ((model[m].flag & VoxelData::VOXELCOLOR_1_FLAG) == 0) {
-      model[m].flag = 0;
-    }
-  }
+  //for (uint64_t m = 0; m < model.size(); ++m) {
+  //  if ((model[m].flag & VoxelData::VOXELCOLOR_1_FLAG) == 0) {
+  //    model[m].flag = 0;
+  //  }
+  //}
 }
 
 static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& vcolor)
