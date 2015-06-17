@@ -85,9 +85,7 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 
   // Initialize
   for (uint64_t m = 0; m < model.size(); ++m) {
-    uint32_t val = 0;
-    val |= VoxelData::VISUALHULL_FLAG;
-    model[m].flag = val;
+    model[m].flag = VoxelData::VISIBLE_FLAG;
   }
 
   // Visual Hull
@@ -101,7 +99,7 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 
     for (uint64_t m = 0; m < model.size(); ++m) {
       VoxelData& voxel = model[m];
-      if ((voxel.flag & VoxelData::VISUALHULL_FLAG) == 0) {
+      if ((voxel.flag & VoxelData::VISIBLE_FLAG) == 0) {
         continue;
       }
 
@@ -112,7 +110,7 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
       QPoint pt2d = QPoint((float)pt.x(), (float)pt.y());
       if (mask.valid(pt2d)) {
         if (qGray(mask.pixel(pt2d)) < 10) {
-          voxel.flag &= ~VoxelData::VISUALHULL_FLAG; // mark invisible
+          voxel.flag = 0; // mark invisible
           // mark neighborhood
           uint32_t x, y, z;
           morton_decode(m, x, y, z);
@@ -138,7 +136,8 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
           }
         }
       } else {
-        voxel.flag &= ~VoxelData::VISUALHULL_FLAG;
+        // outside image
+        voxel.flag = 0;
       }
     }
   }
@@ -147,7 +146,7 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 
   // Finalize
   for (uint64_t m = 0; m < model.size(); ++m) {
-    if ((model[m].flag & VoxelData::VISUALHULL_FLAG) == 0) {
+    if ((model[m].flag & VoxelData::VISIBLE_FLAG) == 0) {
       model[m].flag = 0;
     }
   }
@@ -163,22 +162,32 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
   using recon::AABox;
   using recon::Ray;
 
-  QList<QImage> images;
-  images.reserve(cameras.size());
-  for (Camera cam : cameras) {
-    images.append(QImage(cam.imagePath()));
-  }
   int cam_n = cameras.size();
 
-  for (int iterations = 1; iterations; --iterations) {
+  QList<QImage> images, masks;
+  images.reserve(cam_n);
+  masks.reserve(cam_n);
+  for (Camera cam : cameras) {
+    images.append(QImage(cam.imagePath()));
+    masks.append(QImage(cam.maskPath()));
+  }
+
+  for (int iterations = 5; iterations; --iterations) {
     for (uint64_t morton = 0, morton_count = model.size(); morton < morton_count; ++morton) {
       VoxelData& voxel = model[morton];
+      if ((voxel.flag & VoxelData::VISIBLE_FLAG) == 0)
+        continue;
       if ((voxel.flag & VoxelData::SURFACE_FLAG) == 0)
         continue;
+      if ((voxel.flag & VoxelData::PHOTO_CONSISTENT_FLAG))
+        continue;
+
+      QList<uint32_t> pixels, pixbounds;
 
       for (int cam_id = 0; cam_id < cam_n; ++cam_id) {
         Camera cam = cameras[cam_id];
         QImage image = images[cam_id];
+        QImage mask = masks[cam_id];
 
         if (!model.check_visibility(cam.center(), morton)) {
           continue;
@@ -206,32 +215,73 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
             minpt = min(minpt, pt);
             maxpt = max(maxpt, pt);
           }
-          clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
-          clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+          //clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+          //clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+        }
+
+        // feed pixels
+        for (int px = (float)minpt.x(); px <= (float)maxpt.x(); ++px) {
+          for (int py = (float)minpt.y(); py <= (float)maxpt.y(); ++py) {
+            if (image.valid(px, py))
+              //if (qGray(mask.pixel(px, py) > 100))
+                pixels.append(image.pixel(px, py));
+          }
+        }
+
+        // update pixbounds
+        if (pixbounds.empty()) {
+          if (!pixels.empty())
+            pixbounds.append(pixels.size());
+        } else if (pixels.size() > pixbounds.size()) {
+          pixbounds.append(pixels.size());
         }
 
         // compute color
-        vec3 color = vec3::zero();
-        float count = 0.0f;
-        for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
-          for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
-            QRgb c = image.pixel(px, py);
-            color = color + vec3(qRed(c), qGreen(c), qBlue(c));
-            count += 1.0f;
+        if (false) {
+          vec3 color = vec3::zero();
+          float count = 0.0f;
+          for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
+            for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
+              QRgb c = image.pixel(px, py);
+              color = color + vec3(qRed(c), qGreen(c), qBlue(c));
+              count += 1.0f;
+            }
           }
-        }
-        color = color / count;
-        uint32_t ucolor = qRgb((float)color.x(), (float)color.y(), (float)color.z());
-        float udepth = 1.0f / (float)maxpt.z();
-
-        //if ((voxel.flag & VoxelData::VOXELCOLOR_1_FLAG) == 0) {
-          voxel.color_depth = udepth;
+          color = color / count;
+          uint32_t ucolor = qRgb((float)color.x(), (float)color.y(), (float)color.z());
           voxel.color = ucolor;
-          voxel.flag |= VoxelData::VOXELCOLOR_1_FLAG;
-        //} else if (voxel.color_depth > udepth){
-        //  voxel.color_depth = udepth;
-        //  voxel.color = ucolor;
-        //}
+        }
+      }
+      //
+      uint32_t vcolor;
+      if (check_photo_consistency(pixels, pixbounds, vcolor)) {
+        voxel.color = vcolor;
+        voxel.flag |= VoxelData::PHOTO_CONSISTENT_FLAG;
+      } else {
+        voxel.flag = 0;
+        voxel.color = 0;
+        uint32_t x, y, z;
+        recon::morton_decode(morton, x, y, z);
+        VoxelData* neighbor;
+
+        if ((neighbor = model.get(x+1, y, z))) {
+          neighbor->flag |= VoxelData::SURFACE_FLAG;
+        }
+        if ((neighbor = model.get(x-1, y, z))) {
+          neighbor->flag |= VoxelData::SURFACE_FLAG;
+        }
+        if ((neighbor = model.get(x, y+1, z))) {
+          neighbor->flag |= VoxelData::SURFACE_FLAG;
+        }
+        if ((neighbor = model.get(x, y-1, z))) {
+          neighbor->flag |= VoxelData::SURFACE_FLAG;
+        }
+        if ((neighbor = model.get(x, y, z+1))) {
+          neighbor->flag |= VoxelData::SURFACE_FLAG;
+        }
+        if ((neighbor = model.get(x, y, z-1))) {
+          neighbor->flag |= VoxelData::SURFACE_FLAG;
+        }
       }
     }
   }
@@ -258,16 +308,118 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
   // https://gist.github.com/davll/86633cf34567e6852820#file-voxelcolor-cpp-L168
 
   // Finalize
-  //for (uint64_t m = 0; m < model.size(); ++m) {
-  //  if ((model[m].flag & VoxelData::VOXELCOLOR_1_FLAG) == 0) {
-  //    model[m].flag = 0;
-  //  }
-  //}
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    if ((model[m].flag & VoxelData::VISIBLE_FLAG) == 0) {
+      model[m].flag = 0;
+    }
+  }
 }
 
-static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& vcolor)
+static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& color)
 {
-  return true;
+  const double adaptiveThreshold1 = 10.0;
+  const double adaptiveThreshold2 = 6.0;
+
+  if(pixels.size() == 0) {
+    //printf("WTF\n");
+    return false;
+  }
+
+  int64_t colRsquared = 0, colR = 0;
+  int64_t colGsquared = 0, colG = 0;
+  int64_t colBsquared = 0, colB = 0;
+  int64_t current_colRsquared = 0, current_colR = 0;
+  int64_t current_colGsquared = 0, current_colG = 0;
+  int64_t current_colBsquared = 0, current_colB = 0;
+
+  double averageStdDev = 0.0;         // accumulator for the average standard
+                                      // deviation over all images
+  int K = 0, current_K = 0;
+  unsigned int i = 0;
+  auto imageTracker = pixbounds.begin();
+  for(auto iter = pixels.begin(); iter != pixels.end(); iter++, i++) {
+    //dbg << i << " " << *imageTracker << "\n";
+    if(i >= *imageTracker) {     // advance to the next image
+      colRsquared += current_colRsquared;
+      colGsquared += current_colGsquared;
+      colBsquared += current_colBsquared;
+      colR += current_colR;
+      colG += current_colG;
+      colB += current_colB;
+      K += current_K;
+
+      // calculate the standard deviation for this single image
+      if(current_K != 0) {
+        double variance =
+          (static_cast<double>(current_colRsquared + current_colGsquared + current_colBsquared) / current_K) -
+          (static_cast<double>(current_colR * current_colR + current_colG * current_colG + current_colB * current_colB) / (current_K * current_K));
+
+        averageStdDev += sqrt(variance);
+      }
+
+      current_colRsquared = 0;
+      current_colGsquared = 0;
+      current_colBsquared = 0;
+      current_colR = 0;
+      current_colG = 0;
+      current_colB = 0;
+      current_K = 0;
+      imageTracker++;
+      while(i >= *imageTracker) {
+        if(imageTracker == pixbounds.end())
+          throw "That is impossible: ran out of images";
+        imageTracker++;
+      }
+    }
+
+    uint32_t pixel = *iter;
+
+    current_colRsquared += qRed(pixel) * qRed(pixel);
+    current_colGsquared += qGreen(pixel) * qGreen(pixel);
+    current_colBsquared += qBlue(pixel) * qBlue(pixel);
+    current_colR += qRed(pixel);
+    current_colG += qGreen(pixel);
+    current_colB += qBlue(pixel);
+    current_K++;
+  }
+
+  { // add stats from last image
+    colRsquared += current_colRsquared;
+    colGsquared += current_colGsquared;
+    colBsquared += current_colBsquared;
+    colR += current_colR;
+    colG += current_colG;
+    colB += current_colB;
+    K += current_K;
+
+    // calculate the standard deviation for this single image
+    if(current_K != 0) {
+      double variance =
+        (static_cast<double>(current_colRsquared + current_colGsquared + current_colBsquared) / current_K) -
+        (static_cast<double>(current_colR * current_colR + current_colG * current_colG + current_colB * current_colB) / (current_K * current_K));
+
+      averageStdDev += sqrt(variance);
+    }
+  }
+
+  // divide by number of images to get the true average
+  averageStdDev = averageStdDev / pixbounds.size();
+
+  color = qRgb(colR / K, colG / K, colB / K);
+
+  // note: this is only safe because we are now using 64-bit integers; that way
+  // there won't be any overflows. With 32-bit integers, the following statement
+  // can overflow with ~11000 white pixels (~32000 / 3)
+  double var = (static_cast<double>(colRsquared + colGsquared + colBsquared) / K) -
+               (static_cast<double>(colR * colR + colG * colG + colB * colB) / (K * K));
+  double stddev = sqrt(var);
+
+  //printf("%lf %lf\n", stddev, adaptiveThreshold1 + averageStdDev * adaptiveThreshold2);
+
+  if(stddev < adaptiveThreshold1 + averageStdDev * adaptiveThreshold2) {
+    return true;
+  }
+  return false;
 }
 
 static void save_model(const QString& path, const recon::VoxelModel& model)
@@ -277,7 +429,8 @@ static void save_model(const QString& path, const recon::VoxelModel& model)
 
   uint64_t count = 0;
   for (uint64_t m = 0; m < model.size(); ++m) {
-    if ((model[m].flag & VoxelData::SURFACE_FLAG) != 0)
+    uint32_t f = model[m].flag;
+    if ((f & VoxelData::VISIBLE_FLAG) && (f & VoxelData::SURFACE_FLAG))
       count++;
   }
 
@@ -289,7 +442,8 @@ static void save_model(const QString& path, const recon::VoxelModel& model)
   uint64_t vid = 0;
   for (uint64_t m = 0; m < model.size(); ++m) {
     VoxelData v = model[m];
-    if ((v.flag & VoxelData::SURFACE_FLAG) == 0)
+    uint32_t flag = model[m].flag;
+    if (!(flag & VoxelData::VISIBLE_FLAG) || !(flag & VoxelData::SURFACE_FLAG))
       continue;
 
     AABox vbox = model.boundingbox(m);

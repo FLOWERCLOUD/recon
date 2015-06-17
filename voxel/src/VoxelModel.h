@@ -18,16 +18,15 @@ using vectormath::aos::utils::AABox;
 using vectormath::aos::utils::Ray;
 
 struct VoxelData {
-  enum Flag {
-    VISUALHULL_FLAG = 0x1,
+  enum Flag : uint32_t {
+    VISIBLE_FLAG = 0x1,
     SURFACE_FLAG = 0x2,
-    VOXELCOLOR_1_FLAG = 0x4,
-    PHOTO_CONSISTENT_FLAG = 0x8,
+    PHOTO_CONSISTENT_FLAG = 0x4,
   };
 
   uint32_t flag;
   uint32_t color;
-  float color_depth;
+  //float color_depth;
 };
 
 class VoxelModel {
