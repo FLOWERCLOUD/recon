@@ -22,6 +22,26 @@ struct SampleWindow {
   uint32_t red[121];
   uint32_t green[121];
   uint32_t blue[121];
+
+  SampleWindow(const QImage& image, vec3 xy)
+  : valid(false)
+  {
+    int width = image.width(), height = image.height();
+    int px = (float)xy.x(), py = (float)xy.y();
+    int px0 = px - 5, px1 = px + 5, py0 = py - 5, py1 = py + 5;
+
+    if (px0 >= 0 && py0 >= 0 && px1 < width && py1 < height) {
+      this->valid = true;
+      for (int i = 0; i < 11; ++i) {
+        for (int j = 0; j < 11; ++j) {
+          QRgb c = image.pixel(px0 + j, py0 + i);
+          this->red[i*11+j] = qRed(c);
+          this->green[i*11+j] = qGreen(c);
+          this->blue[i*11+j] = qBlue(c);
+        }
+      }
+    }
+  }
 };
 
 static const mat3 RGB_TO_YUV = mat3{
@@ -161,24 +181,7 @@ SampleWindow GraphCutOptimizer::sample(int cam_id, vec3 x)
   mat = mat * cameras[cam_id].extrinsic();
 
   vec3 pos = proj_vec3(mat * vec4(x, 1.0f));
-  int px = (float)pos.x(), py = (float)pos.y();
-  int px0 = px - 5, px1 = px + 5, py0 = py - 5, py1 = py + 5;
-
-  SampleWindow w;
-  if (px0 >= 0 && py0 >= 0 && px1 < img.width() && py1 < img.height()) {
-    w.valid = true;
-    for (int i = 0; i < 11; ++i) {
-      for (int j = 0; j < 11; ++j) {
-        QRgb c = img.pixel(px0 + j, py0 + i);
-        w.red[i*11+j] = qRed(c);
-        w.green[i*11+j] = qGreen(c);
-        w.blue[i*11+j] = qBlue(c);
-      }
-    }
-  } else {
-    w.valid = false;
-  }
-  return w;
+  return SampleWindow(img, pos);
 }
 
 float GraphCutOptimizer::compute_correlation_score(vec3 x, int cam_i, float d)
@@ -216,6 +219,7 @@ float GraphCutOptimizer::vote(vec3 x, int cam_id)
   for (int i = 0; i < d_num; ++i)
     s[i] = compute_correlation_score(x, cam_id, d[i]);
 
+  // Estimation with Parzen Window
   float c[d_num];
   for (int i = 0; i < d_num; ++i) {
     float sum = 0.0f;
