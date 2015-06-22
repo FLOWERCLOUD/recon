@@ -50,6 +50,10 @@ public:
   bool intersects(uint64_t& morton, const Ray&) const;
   bool check_visibility(vec3 eyepos, uint64_t morton) const;
 
+  inline uint32_t width() const { return m_Width; }
+  inline uint32_t height() const { return m_Height; }
+  inline uint32_t depth() const { return m_Depth; }
+
 private:
   uint32_t m_Level;
   uint32_t m_Width;

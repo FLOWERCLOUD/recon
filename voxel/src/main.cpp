@@ -16,6 +16,7 @@
 
 static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
 static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
+static void my_voxel_coloring(recon::VoxelModel& model, const QList<recon::Camera>& cameras);
 static void save_model(const QString& path, const recon::VoxelModel& model);
 static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& vcolor);
 
@@ -153,6 +154,151 @@ static void visual_hull(recon::VoxelModel& model, const QList<recon::Camera>& ca
 }
 
 static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& cameras)
+{
+  using recon::Camera;
+  using recon::VoxelData;
+  using recon::vec3;
+  using recon::mat4;
+  using recon::vec4;
+  using recon::AABox;
+  using recon::Ray;
+
+  int cam_n = cameras.size();
+
+  QList<QImage> images, masks;
+  images.reserve(cam_n);
+  masks.reserve(cam_n);
+  for (Camera cam : cameras) {
+    images.append(QImage(cam.imagePath()));
+    masks.append(QImage(cam.maskPath()));
+  }
+
+  /*for (int iterations = 5; iterations; --iterations)*/ {
+    for (uint32_t voxel_y = model.height()-1; voxel_y > 0; --voxel_y) {
+      for (uint32_t voxel_x = 0; voxel_x < model.width(); ++voxel_x) {
+        for (uint32_t voxel_z = 0; voxel_z < model.depth(); ++voxel_z) {
+          uint64_t morton = recon::morton_encode(voxel_x, voxel_y, voxel_z);
+          VoxelData& voxel = model[morton];
+          if ((voxel.flag & VoxelData::VISIBLE_FLAG) == 0)
+            continue;
+          if ((voxel.flag & VoxelData::SURFACE_FLAG) == 0)
+            continue;
+
+          QList<uint32_t> pixels, pixbounds;
+
+          for (int cam_id = 0; cam_id < cam_n; ++cam_id) {
+            Camera cam = cameras[cam_id];
+            QImage image = images[cam_id];
+            QImage mask = masks[cam_id];
+
+            if (!model.check_visibility(cam.center(), morton)) {
+              continue;
+            }
+
+            // project 8 corners of voxel onto the image, compute the bounding rectangle
+            vec3 minpt, maxpt;
+            {
+              int width = image.width(), height = image.height();
+              mat4 proj = cam.intrinsicForImage(width, height) * cam.extrinsic();
+              AABox vbox = model.boundingbox(morton);
+              vec3 corners[8] = {
+                vbox.corner0(),
+                vbox.corner1(),
+                vbox.corner2(),
+                vbox.corner3(),
+                vbox.corner4(),
+                vbox.corner5(),
+                vbox.corner6(),
+                vbox.corner7()
+              };
+              maxpt = minpt = proj_vec3(proj * vec4(corners[0], 1.0f));
+              for (int i = 1; i < 8; ++i) {
+                vec3 pt = proj_vec3(proj * vec4(corners[i], 1.0f));
+                minpt = min(minpt, pt);
+                maxpt = max(maxpt, pt);
+              }
+              //clamp(minpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+              //clamp(maxpt, vec3::zero(), vec3((float)width, (float)height, 0.0f));
+            }
+
+            // feed pixels
+            for (int px = (float)minpt.x(); px <= (float)maxpt.x(); ++px) {
+              for (int py = (float)minpt.y(); py <= (float)maxpt.y(); ++py) {
+                if (image.valid(px, py))
+                  //if (qGray(mask.pixel(px, py) > 100))
+                    pixels.append(image.pixel(px, py));
+              }
+            }
+
+            // update pixbounds
+            if (pixbounds.empty()) {
+              if (!pixels.empty())
+                pixbounds.append(pixels.size());
+            } else if (pixels.size() > pixbounds.size()) {
+              pixbounds.append(pixels.size());
+            }
+
+            // compute color
+            if (false) {
+              vec3 color = vec3::zero();
+              float count = 0.0f;
+              for (int px = (float)minpt.x(); px < (float)maxpt.x(); ++px) {
+                for (int py = (float)minpt.y(); py < (float)maxpt.y(); ++py) {
+                  QRgb c = image.pixel(px, py);
+                  color = color + vec3(qRed(c), qGreen(c), qBlue(c));
+                  count += 1.0f;
+                }
+              }
+              color = color / count;
+              uint32_t ucolor = qRgb((float)color.x(), (float)color.y(), (float)color.z());
+              voxel.color = ucolor;
+            }
+          }
+          //
+          uint32_t vcolor;
+          if (check_photo_consistency(pixels, pixbounds, vcolor)) {
+            voxel.color = vcolor;
+            //voxel.flag |= VoxelData::PHOTO_CONSISTENT_FLAG;
+          } else {
+            voxel.flag = 0;
+            voxel.color = 0;
+            uint32_t x, y, z;
+            recon::morton_decode(morton, x, y, z);
+            VoxelData* neighbor;
+
+            if ((neighbor = model.get(x+1, y, z))) {
+              neighbor->flag |= VoxelData::SURFACE_FLAG;
+            }
+            if ((neighbor = model.get(x-1, y, z))) {
+              neighbor->flag |= VoxelData::SURFACE_FLAG;
+            }
+            if ((neighbor = model.get(x, y+1, z))) {
+              neighbor->flag |= VoxelData::SURFACE_FLAG;
+            }
+            if ((neighbor = model.get(x, y-1, z))) {
+              neighbor->flag |= VoxelData::SURFACE_FLAG;
+            }
+            if ((neighbor = model.get(x, y, z+1))) {
+              neighbor->flag |= VoxelData::SURFACE_FLAG;
+            }
+            if ((neighbor = model.get(x, y, z-1))) {
+              neighbor->flag |= VoxelData::SURFACE_FLAG;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Finalize
+  for (uint64_t m = 0; m < model.size(); ++m) {
+    if ((model[m].flag & VoxelData::VISIBLE_FLAG) == 0) {
+      model[m].flag = 0;
+    }
+  }
+}
+
+static void my_voxel_coloring(recon::VoxelModel& model, const QList<recon::Camera>& cameras)
 {
   using recon::Camera;
   using recon::VoxelData;
@@ -317,8 +463,8 @@ static void plane_sweep(recon::VoxelModel& model, const QList<recon::Camera>& ca
 
 static bool check_photo_consistency(const QList<uint32_t>& pixels, const QList<uint32_t>& pixbounds, uint32_t& color)
 {
-  const double adaptiveThreshold1 = 10.0;
-  const double adaptiveThreshold2 = 6.0;
+  const double adaptiveThreshold1 = 6.0;
+  const double adaptiveThreshold2 = 1.0;
 
   if(pixels.size() == 0) {
     //printf("WTF\n");

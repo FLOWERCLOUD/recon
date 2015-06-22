@@ -4,6 +4,7 @@ file(GLOB headers src/*.h)
 file(GLOB sources src/*.cpp)
 add_executable(voxel src/main.cpp ${sources} ${headers})
 
+add_subdirectory(gridcut)
 add_subdirectory(trimesh2)
 
 target_compile_options(voxel
@@ -24,6 +25,7 @@ target_link_libraries(voxel
   Qt5::Core
   Qt5::Gui
   trimesh2
+  gridcut
 )
 
 set_target_properties(voxel PROPERTIES
