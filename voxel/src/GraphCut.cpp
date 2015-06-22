@@ -85,7 +85,7 @@ struct GraphCutOptimizer {
   std::vector<QImage> masks; // cache
   vec3 model_center;
 
-  explicit GraphCutOptimizer(const QList<Camera>& cams, vec3 mcenter);
+  explicit GraphCutOptimizer(const QList<Camera>& cams);
 
   QImage image(int cam_id);
   QImage mask(int cam_id);
@@ -98,15 +98,14 @@ struct GraphCutOptimizer {
   float compute_correlation_score(vec3 x, int cam_i, float d);
   float vote(vec3 x, int cam_id);
 
-  void initialize();
+  void initialize(vec3 model_center);
 };
 
-GraphCutOptimizer::GraphCutOptimizer(const QList<Camera>& cams, vec3 mcenter)
+GraphCutOptimizer::GraphCutOptimizer(const QList<Camera>& cams)
 : cameras(cams)
 , closest_camera_lists(cams.size())
 , images(cams.size())
 , masks(cams.size())
-, model_center(mcenter)
 {
 }
 
@@ -236,6 +235,11 @@ float GraphCutOptimizer::vote(vec3 x, int cam_id)
   } else {
     return 0.0f;
   }
+}
+
+void GraphCutOptimizer::initialize(vec3 model_center)
+{
+  this->model_center = model_center;
 }
 
 }
