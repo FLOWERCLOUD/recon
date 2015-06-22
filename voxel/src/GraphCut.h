@@ -5,6 +5,11 @@
   George Vogiatzis, Carlos H. Esteban, Philip H. S. Torr, Roberto Cipolla
   PAMI 2007
 
+  Shape from Photographs: A Multi-view Stereo Pipeline
+  C. Hernández and G. Vogiatzis
+  Computer Vision: Detection, Recognition and Reconstruction
+  2010 Springer-Verlag
+
   Multi-view Stereo via Volumetric Graph-cuts
   George Vogiatzis, P.H.S. Torr, R. Cipolla
   CVPR 2005
