@@ -134,7 +134,7 @@ bool CameraLoader::load_from_nvm(const QString& path)
 
       bool visible = true;
       for (const Camera& cam : m_Cameras) {
-        visible = visible && cam.canSee(vec3::load(pos));
+        visible = visible && cam.canSee(point3::load(pos));
       }
       if (!visible)
         continue;

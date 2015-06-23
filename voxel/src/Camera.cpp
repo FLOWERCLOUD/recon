@@ -116,7 +116,7 @@ mat4 Camera::extrinsic() const
 {
   mat3 rot = rotation();
   point3 pos = center();
-  vec3 trans = -(rot * pos.data);
+  vec3 trans = -transform(rot, pos);
   return mat4(rot, trans);
 }
 
@@ -183,10 +183,10 @@ void Camera::setMaskPath(const QString& path)
   data->mask_path = path;
 }
 
-bool Camera::canSee(vec3 pt) const
+bool Camera::canSee(point3 pt) const
 {
   mat4 tfm = intrinsicForViewport() * extrinsic();
-  vec3 pos = proj_vec3(tfm * vec4(pt, 1.0f));
+  vec3 pos = proj_vec3(transform(tfm, pt));
   //printf("pos.z = %f\n", (float)pos.z());
   return fabsf((float)pos.x()) <= 1.0f && fabsf((float)pos.y()) <= 1.0f;
   //return true;

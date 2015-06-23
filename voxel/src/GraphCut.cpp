@@ -1,7 +1,7 @@
 #include <vectormath.h>
 #include <vectormath/aos/utils/ray3.h>
 #include "Camera.h"
-//#include "VoxelModel.h"
+#include "morton_code.h"
 #include "GraphCut.h"
 #include <GridCut/GridGraph_3D_6C.h>
 #include <AlphaExpansion/AlphaExpansion_3D_6C.h>
@@ -245,6 +245,13 @@ float GraphCutOptimizer::vote(point3 x, int cam_id)
 void GraphCutOptimizer::initialize(point3 model_center)
 {
   this->model_center = model_center;
+}
+
+VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
+{
+  GraphCutOptimizer optimizer(cameras);
+
+  return QList<uint64_t>(); // NULL
 }
 
 }

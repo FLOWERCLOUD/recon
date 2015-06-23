@@ -63,7 +63,7 @@ public:
   QString maskPath() const;
   void setMaskPath(const QString&);
 
-  bool canSee(vec3 pt) const;
+  bool canSee(point3 pt) const;
 
 private:
   //QSharedDataPointer<CameraData> data;

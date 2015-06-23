@@ -17,6 +17,12 @@
 
 // N.D.F. Cambell, G. Vogiatzis, C. Hernández and R. Cipolla, CVMP 2011. Automatic Object Segmentation from Calibrated Images
 
+#include "Camera.h"
+#include "VoxelModel.h"
+#include <QList>
+
 namespace recon {
+
+VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras);
 
 }

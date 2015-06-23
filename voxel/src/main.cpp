@@ -1,6 +1,5 @@
 #include "CameraLoader.h"
-#include "morton_code.h"
-#include <trimesh2/TriMesh.h>
+#include "GraphCut.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -55,7 +54,9 @@ int main(int argc, char* argv[])
   //  qDebug() << "mask path = " << cam.maskPath();
   //}
 
-
+  recon::VoxelModel model(7, loader.model_boundingbox());
+  recon::VoxelList vlist = graph_cut(model, cameras);
+  save_ply("voxels.ply", model, vlist);
 
   return 0;
 }
