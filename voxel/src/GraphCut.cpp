@@ -345,8 +345,15 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   for (int x = 0; x < w; ++x) {
     for (int y = 0; y < h; ++y) {
       for (int z = 0; z < d; ++z) {
-        int node_id = graph.node_id(x, y, z);
-        if (graph.get_segment(node_id) == 0) {
+        bool surface =
+          (x == 0 || graph.get_segment(graph.node_id(x-1,y,z)) == 1) ||
+          (x == w-1 || graph.get_segment(graph.node_id(x+1,y,z)) == 1) ||
+          (y == 0 || graph.get_segment(graph.node_id(x,y-1,z)) == 1) ||
+          (y == h-1 || graph.get_segment(graph.node_id(x,y+1,z)) == 1) ||
+          (z == 0 || graph.get_segment(graph.node_id(x,y,z-1)) == 1) ||
+          (z == d-1 || graph.get_segment(graph.node_id(x,y,z+1)) == 1);
+
+        if (graph.get_segment(graph.node_id(x, y, z)) == 0 && surface) {
           result.append(morton_encode(x, y, z));
         }
       }
