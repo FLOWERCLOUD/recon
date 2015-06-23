@@ -290,13 +290,12 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   optimizer.model_center = (point3)model.real_box.center();
 
   // Allocate Graph
-  using GridGraph = GridGraph_3D_6C<int32_t, int32_t, int64_t>;
+  using GridGraph = GridGraph_3D_6C<float, float, double>;
   GridGraph graph(model.width, model.height, model.depth);
 
   // Setup Graph - Visual Hull
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
-    return voxels; // FIXME: remove it
 
     uint64_t s = 0, n = voxels.size();
     for (uint64_t i = 0; i < n; ++i) {
@@ -304,45 +303,41 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       uint64_t m = voxels[i];
       for (; s < m; ++s) {
         morton_decode(s, x, y, z);
-        graph.set_terminal_cap(graph.node_id(x, y, z), 0, 0x0FFFFFFF);
+        graph.set_terminal_cap(graph.node_id(x, y, z), 0, INFINITY);
       }
 
       morton_decode(m, x, y, z);
-      graph.set_terminal_cap(graph.node_id(x, y, z), 6, 0);
+      graph.set_terminal_cap(graph.node_id(x, y, z), 1.0f, 0);
+
+      s = m + 1;
     }
 
     for (; s < n; ++s) {
       uint32_t x, y, z;
       morton_decode(s, x, y, z);
-      graph.set_terminal_cap(graph.node_id(x, y, z), 0, 0x0FFFFFFF);
+      graph.set_terminal_cap(graph.node_id(x, y, z), 0, INFINITY);
     }
   }
 
   // Setup Graph - Photo Consistency
   {
-    /*for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
+    for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
       uint32_t x, y, z;
       morton_decode(m, x, y, z);
       int node = graph.node_id(x, y, z);
       if (x > 0)
-        graph.set_neighbor_cap(node,-1, 0, 0, 1);
-      //if (x < model.width-1)
-      //  graph.set_neighbor_cap(node, 1, 0, 0, 1);
+        graph.set_neighbor_cap(node,-1, 0, 0, 0.125f);
       if (y > 0)
-        graph.set_neighbor_cap(node, 0,-1, 0, 1);
-      //if (y < model.height-1)
-      //  graph.set_neighbor_cap(node, 0, 1, 0, 1);
+        graph.set_neighbor_cap(node, 0,-1, 0, 0.125f);
       if (z > 0)
-        graph.set_neighbor_cap(node, 0, 0,-1, 1);
-      //if (z < model.depth-1)
-      //  graph.set_neighbor_cap(node, 0, 0, 1, 1);
-    }*/
+        graph.set_neighbor_cap(node, 0, 0,-1, 0.125f);
+    }
   }
   optimizer.clear_images();
 
   // Optimize
   graph.compute_maxflow();
-  printf("flow = %lld\n", graph.get_flow());
+  printf("flow = %lf\n", graph.get_flow());
 
   // Get Result
   QList<uint64_t> result;
