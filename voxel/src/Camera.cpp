@@ -82,12 +82,12 @@ void Camera::setRadialDistortion(float k1, float k2)
   data->distortion[1] = k2;
 }
 
-vec3 Camera::center() const
+point3 Camera::center() const
 {
-  return vec3::load(data->center);
+  return point3::load(data->center);
 }
 
-void Camera::setCenter(vec3 pos)
+void Camera::setCenter(point3 pos)
 {
   pos.store(data->center);
 }
@@ -115,8 +115,8 @@ vec3 Camera::direction() const
 mat4 Camera::extrinsic() const
 {
   mat3 rot = rotation();
-  vec3 pos = center();
-  vec3 trans = -(rot * pos);
+  point3 pos = center();
+  vec3 trans = -(rot * pos.data);
   return mat4(rot, trans);
 }
 

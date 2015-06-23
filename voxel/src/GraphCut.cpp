@@ -1,5 +1,5 @@
 #include <vectormath.h>
-#include <vectormath/aos/utils/ray.h>
+#include <vectormath/aos/utils/ray3.h>
 #include "Camera.h"
 //#include "VoxelModel.h"
 #include "GraphCut.h"
@@ -14,7 +14,8 @@ namespace recon {
 
 using vectormath::aos::vec3;
 using vectormath::aos::vec4;
-using vectormath::aos::utils::Ray;
+using vectormath::aos::utils::point3;
+using vectormath::aos::utils::ray3;
 using GridGraph = GridGraph_3D_6C<float, float, double>;
 
 struct SampleWindow {
@@ -103,7 +104,7 @@ struct GraphCutOptimizer {
   std::vector<QList<int>> closest_camera_lists;
   std::vector<QImage> images; // cache
   std::vector<QImage> masks; // cache
-  vec3 model_center;
+  point3 model_center;
 
   explicit GraphCutOptimizer(const QList<Camera>& cams);
 
@@ -113,12 +114,12 @@ struct GraphCutOptimizer {
   void clear_masks();
 
   QList<int> closest_cameras(int cam_id);
-  SampleWindow sample(int cam_id, vec3 x);
+  SampleWindow sample(int cam_id, point3 x);
 
-  float compute_correlation_score(vec3 x, int cam_i, float d);
-  float vote(vec3 x, int cam_id);
+  float compute_correlation_score(point3 x, int cam_i, float d);
+  float vote(point3 x, int cam_id);
 
-  void initialize(vec3 model_center);
+  void initialize(point3 model_center);
 };
 
 GraphCutOptimizer::GraphCutOptimizer(const QList<Camera>& cams)
@@ -174,21 +175,21 @@ QList<int> GraphCutOptimizer::closest_cameras(int cam_id)
   return closest_camera_lists[cam_id];
 }
 
-SampleWindow GraphCutOptimizer::sample(int cam_id, vec3 x)
+SampleWindow GraphCutOptimizer::sample(int cam_id, point3 x)
 {
   QImage img = image(cam_id);
   mat4 mat = cameras[cam_id].intrinsicForImage(img.width(), img.height());
   mat = mat * cameras[cam_id].extrinsic();
 
-  vec3 pos = proj_vec3(mat * vec4(x, 1.0f));
+  vec3 pos = proj_vec3(mat * vec4(x.data, 1.0f));
   return SampleWindow(img, pos);
 }
 
-float GraphCutOptimizer::compute_correlation_score(vec3 x, int cam_i, float d)
+float GraphCutOptimizer::compute_correlation_score(point3 x, int cam_i, float d)
 {
   QList<int> cams = closest_cameras(cam_i);
 
-  Ray r = Ray{ x, cameras[cam_i].center() - x };
+  ray3 r = ray3{ x, cameras[cam_i].center() - x };
   SampleWindow wi = sample(cam_i, r[d]);
 
   float ncc_sum = 0.0f;
@@ -200,7 +201,7 @@ float GraphCutOptimizer::compute_correlation_score(vec3 x, int cam_i, float d)
   return ncc_sum;
 }
 
-float GraphCutOptimizer::vote(vec3 x, int cam_id)
+float GraphCutOptimizer::vote(point3 x, int cam_id)
 {
   const int d_num = 64;
   static const float d[d_num] = {
@@ -241,7 +242,7 @@ float GraphCutOptimizer::vote(vec3 x, int cam_id)
   }
 }
 
-void GraphCutOptimizer::initialize(vec3 model_center)
+void GraphCutOptimizer::initialize(point3 model_center)
 {
   this->model_center = model_center;
 }

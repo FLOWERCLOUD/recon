@@ -2,6 +2,7 @@
 
 #include <vectormath.h>
 #include <vectormath/aos/utils/aabox.h>
+#include <vectormath/aos/utils/point3.h>
 #include <QSharedDataPointer>
 #include <QString>
 
@@ -12,6 +13,7 @@ using vectormath::aos::vec4;
 using vectormath::aos::quat;
 using vectormath::aos::mat3;
 using vectormath::aos::mat4;
+using vectormath::aos::utils::point3;
 using vectormath::aos::utils::AABox;
 
 struct CameraData;
@@ -39,8 +41,8 @@ public:
   void setRadialDistortion(const RadialDistortion&);
   void setRadialDistortion(float, float);
 
-  vec3 center() const;
-  void setCenter(vec3);
+  point3 center() const;
+  void setCenter(point3);
 
   mat3 rotation() const;
   void setRotation(mat3);
