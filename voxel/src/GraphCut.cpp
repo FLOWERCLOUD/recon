@@ -9,6 +9,7 @@
 #include <QImage>
 #include <algorithm>
 #include <vector>
+#include <float.h>
 
 namespace recon {
 
@@ -16,7 +17,6 @@ using vectormath::aos::vec3;
 using vectormath::aos::vec4;
 using vectormath::aos::utils::point3;
 using vectormath::aos::utils::ray3;
-using GridGraph = GridGraph_3D_6C<float, float, double>;
 
 struct SampleWindow {
   int32_t valid;
@@ -103,15 +103,15 @@ struct GraphCutOptimizer {
   QList<Camera> cameras;
   std::vector<QList<int>> closest_camera_lists;
   std::vector<QImage> images; // cache
-  std::vector<QImage> masks; // cache
+  //std::vector<QImage> masks; // cache
   point3 model_center;
 
   explicit GraphCutOptimizer(const QList<Camera>& cams);
 
   QImage image(int cam_id);
-  QImage mask(int cam_id);
+  //QImage mask(int cam_id);
   void clear_images();
-  void clear_masks();
+  //void clear_masks();
 
   QList<int> closest_cameras(int cam_id);
   SampleWindow sample(int cam_id, point3 x);
@@ -124,7 +124,7 @@ GraphCutOptimizer::GraphCutOptimizer(const QList<Camera>& cams)
 : cameras(cams)
 , closest_camera_lists(cams.size())
 , images(cams.size())
-, masks(cams.size())
+//, masks(cams.size())
 {
 }
 
@@ -136,23 +136,23 @@ QImage GraphCutOptimizer::image(int cam_id)
   return images[cam_id];
 }
 
-QImage GraphCutOptimizer::mask(int cam_id)
+/*QImage GraphCutOptimizer::mask(int cam_id)
 {
   if (masks[cam_id].isNull()) {
     masks[cam_id] = QImage(cameras[cam_id].maskPath());
   }
   return masks[cam_id];
-}
+}*/
 
 void GraphCutOptimizer::clear_images()
 {
   std::fill(images.begin(), images.end(), QImage());
 }
 
-void GraphCutOptimizer::clear_masks()
+/*void GraphCutOptimizer::clear_masks()
 {
   std::fill(masks.begin(), masks.end(), QImage());
-}
+}*/
 
 QList<int> GraphCutOptimizer::closest_cameras(int cam_id)
 {
@@ -240,6 +240,48 @@ float GraphCutOptimizer::vote(point3 x, int cam_id)
   }
 }
 
+static QList<uint64_t> visual_hull(const VoxelModel& model, const QList<Camera>& cameras)
+{
+  QList<uint64_t> voxels[2];
+  voxels[0].reserve(model.morton_length);
+
+  for (uint64_t m = 0, ms = model.morton_length; m < ms; ++m) {
+    voxels[0].append(m);
+  }
+
+  int current_voxel_list = 0;
+  for (int cam_i = 0, cam_n = cameras.size(); cam_i < cam_n; ++cam_i) {
+    Camera cam = cameras[cam_i];
+    QImage mask = QImage(cam.maskPath());
+
+    mat4 extrinsic = cam.extrinsic();
+    mat4 intrinsic = cam.intrinsicForImage(mask.width(), mask.height());
+    mat4 transform = intrinsic * extrinsic;
+
+    QList<uint64_t>& old_voxels = voxels[current_voxel_list];
+    QList<uint64_t>& new_voxels = voxels[(current_voxel_list + 1) % 2];
+    new_voxels.clear();
+    new_voxels.reserve(old_voxels.size());
+
+    for (uint64_t morton : old_voxels) {
+      AABox vbox = model.element_box(morton);
+      vec3 pos = vbox.center();
+      pos = proj_vec3(transform * vec4(pos, 1.0f));
+
+      QPoint pt2d = QPoint((float)pos.x(), (float)pos.y());
+      if (mask.valid(pt2d)) {
+        if (qGray(mask.pixel(pt2d)) > 100) {
+          new_voxels.append(morton);
+        }
+      }
+    }
+
+    current_voxel_list = (current_voxel_list + 1) % 2;
+  }
+
+  return voxels[current_voxel_list];
+}
+
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 {
   GraphCutOptimizer optimizer(cameras);
@@ -247,17 +289,76 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   // Initialize
   optimizer.model_center = (point3)model.real_box.center();
 
-  // Build Graph - Visual Hull
-  optimizer.clear_masks();
+  // Allocate Graph
+  using GridGraph = GridGraph_3D_6C<int32_t, int32_t, int64_t>;
+  GridGraph graph(model.width, model.height, model.depth);
 
-  // Build Graph - Photo Consistency
+  // Setup Graph - Visual Hull
+  {
+    QList<uint64_t> voxels = visual_hull(model, cameras);
+    return voxels; // FIXME: remove it
+
+    uint64_t s = 0, n = voxels.size();
+    for (uint64_t i = 0; i < n; ++i) {
+      uint32_t x, y, z;
+      uint64_t m = voxels[i];
+      for (; s < m; ++s) {
+        morton_decode(s, x, y, z);
+        graph.set_terminal_cap(graph.node_id(x, y, z), 0, 0x0FFFFFFF);
+      }
+
+      morton_decode(m, x, y, z);
+      graph.set_terminal_cap(graph.node_id(x, y, z), 6, 0);
+    }
+
+    for (; s < n; ++s) {
+      uint32_t x, y, z;
+      morton_decode(s, x, y, z);
+      graph.set_terminal_cap(graph.node_id(x, y, z), 0, 0x0FFFFFFF);
+    }
+  }
+
+  // Setup Graph - Photo Consistency
+  {
+    /*for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
+      uint32_t x, y, z;
+      morton_decode(m, x, y, z);
+      int node = graph.node_id(x, y, z);
+      if (x > 0)
+        graph.set_neighbor_cap(node,-1, 0, 0, 1);
+      //if (x < model.width-1)
+      //  graph.set_neighbor_cap(node, 1, 0, 0, 1);
+      if (y > 0)
+        graph.set_neighbor_cap(node, 0,-1, 0, 1);
+      //if (y < model.height-1)
+      //  graph.set_neighbor_cap(node, 0, 1, 0, 1);
+      if (z > 0)
+        graph.set_neighbor_cap(node, 0, 0,-1, 1);
+      //if (z < model.depth-1)
+      //  graph.set_neighbor_cap(node, 0, 0, 1, 1);
+    }*/
+  }
   optimizer.clear_images();
 
   // Optimize
+  graph.compute_maxflow();
+  printf("flow = %lld\n", graph.get_flow());
 
   // Get Result
+  QList<uint64_t> result;
+  int w = model.width, h = model.height, d = model.depth;
+  for (int x = 0; x < w; ++x) {
+    for (int y = 0; y < h; ++y) {
+      for (int z = 0; z < d; ++z) {
+        int node_id = graph.node_id(x, y, z);
+        if (graph.get_segment(node_id) == 0) {
+          result.append(morton_encode(x, y, z));
+        }
+      }
+    }
+  }
 
-  return QList<uint64_t>(); // NULL
+  return result;
 }
 
 }
