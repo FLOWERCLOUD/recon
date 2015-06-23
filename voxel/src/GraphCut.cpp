@@ -118,8 +118,6 @@ struct GraphCutOptimizer {
 
   float compute_correlation_score(point3 x, int cam_i, float d);
   float vote(point3 x, int cam_id);
-
-  void initialize(point3 model_center);
 };
 
 GraphCutOptimizer::GraphCutOptimizer(const QList<Camera>& cams)
@@ -242,14 +240,22 @@ float GraphCutOptimizer::vote(point3 x, int cam_id)
   }
 }
 
-void GraphCutOptimizer::initialize(point3 model_center)
-{
-  this->model_center = model_center;
-}
-
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 {
   GraphCutOptimizer optimizer(cameras);
+
+  // Initialize
+  optimizer.model_center = (point3)model.real_box.center();
+
+  // Build Graph - Visual Hull
+  optimizer.clear_masks();
+
+  // Build Graph - Photo Consistency
+  optimizer.clear_images();
+
+  // Optimize
+
+  // Get Result
 
   return QList<uint64_t>(); // NULL
 }
