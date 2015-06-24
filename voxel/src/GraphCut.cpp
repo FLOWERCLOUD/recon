@@ -5,12 +5,20 @@
 #include "GraphCut.h"
 #include "VisualHull.h"
 #include <GridCut/GridGraph_3D_6C.h>
-#include <AlphaExpansion/AlphaExpansion_3D_6C.h>
 #include <QList>
 #include <QImage>
 #include <algorithm>
 #include <vector>
 #include <float.h>
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.141592653589793
+#endif
+
+#ifndef M_RSQRT2
+#define M_RSQRT2 0.7071067811865476
+#endif
 
 namespace recon {
 
@@ -100,36 +108,49 @@ struct NormalizedCrossCorrelation {
   }
 };
 
-struct GraphCutOptimizer {
+struct PhotoConsistency {
+  AABox model_box;
   QList<Camera> cameras;
   std::vector<QList<int>> closest_camera_lists;
-  std::vector<QImage> images; // cache
-  //std::vector<QImage> masks; // cache
-  point3 model_center;
+  std::vector<QImage> images;
 
-  explicit GraphCutOptimizer(const QList<Camera>& cams);
-
+  PhotoConsistency(AABox mbox, const QList<Camera>& cameras);
+  QList<int> closest_cameras(int cam_i);
   QImage image(int cam_id);
-  //QImage mask(int cam_id);
-  void clear_images();
-  //void clear_masks();
-
-  QList<int> closest_cameras(int cam_id);
-  SampleWindow sample(int cam_id, point3 x);
-
-  float compute_correlation_score(point3 x, int cam_i, float d);
-  float vote(point3 x, int cam_id);
+  float vote(int cam_i, point3 pos);
+  float compute(vec3 pos);
 };
 
-GraphCutOptimizer::GraphCutOptimizer(const QList<Camera>& cams)
-: cameras(cams)
+PhotoConsistency::PhotoConsistency(AABox mbox, const QList<Camera>& cams)
+: model_box(mbox)
+, cameras(cams)
 , closest_camera_lists(cams.size())
 , images(cams.size())
-//, masks(cams.size())
 {
 }
 
-QImage GraphCutOptimizer::image(int cam_id)
+QList<int> PhotoConsistency::closest_cameras(int cam_i)
+{
+  if (closest_camera_lists[cam_i].isEmpty()) {
+    QList<int> cams;
+
+    int n = cameras.size();
+    for (int i = 0; i < n; ++i) {
+      if (i == cam_i)
+        continue;
+      vec3 v0 = cameras[cam_i].center() - (point3)model_box.center();
+      vec3 v1 = cameras[i].center() - (point3)model_box.center();
+      if ((float)dot(normalize(v0), normalize(v1)) >= float(M_RSQRT2)) {
+        cams.append(i);
+      }
+    }
+
+    closest_camera_lists[cam_i] = cams;
+  }
+  return closest_camera_lists[cam_i];
+}
+
+QImage PhotoConsistency::image(int cam_id)
 {
   if (images[cam_id].isNull()) {
     images[cam_id] = QImage(cameras[cam_id].imagePath());
@@ -137,124 +158,39 @@ QImage GraphCutOptimizer::image(int cam_id)
   return images[cam_id];
 }
 
-/*QImage GraphCutOptimizer::mask(int cam_id)
+float PhotoConsistency::vote(int cam_i, point3 pos)
 {
-  if (masks[cam_id].isNull()) {
-    masks[cam_id] = QImage(cameras[cam_id].maskPath());
-  }
-  return masks[cam_id];
-}*/
-
-void GraphCutOptimizer::clear_images()
-{
-  std::fill(images.begin(), images.end(), QImage());
+  // TODO
+  return 0.0f;
 }
 
-/*void GraphCutOptimizer::clear_masks()
+float PhotoConsistency::compute(vec3 pos)
 {
-  std::fill(masks.begin(), masks.end(), QImage());
-}*/
+  const float param_mju = 0.05f;
 
-QList<int> GraphCutOptimizer::closest_cameras(int cam_id)
-{
-  if (closest_camera_lists[cam_id].isEmpty()) {
-    QList<int> cams;
+  return 0.001f; // TODO: remove it
 
-    int n = cameras.size();
-    for (int i = 0; i < n; ++i) {
-      vec3 v0 = cameras[cam_id].center() - model_center;
-      vec3 v1 = cameras[i].center() - model_center;
-      if (i != cam_id && (float)dot(normalize(v0), normalize(v1)) >= 0.6f) {
-        cams.append(i);
-      }
-    }
-
-    closest_camera_lists[cam_id] = cams;
+  float sum = 0.0f;
+  for (int i = 0, n = cameras.size(); i < n; ++i) {
+    sum += vote(i, (point3)pos);
   }
-  return closest_camera_lists[cam_id];
-}
-
-SampleWindow GraphCutOptimizer::sample(int cam_id, point3 x)
-{
-  QImage img = image(cam_id);
-  mat4 mat = cameras[cam_id].intrinsicForImage(img.width(), img.height());
-  mat = mat * cameras[cam_id].extrinsic();
-
-  vec3 pos = proj_vec3(mat * vec4(x.data, 1.0f));
-  return SampleWindow(img, pos);
-}
-
-float GraphCutOptimizer::compute_correlation_score(point3 x, int cam_i, float d)
-{
-  QList<int> cams = closest_cameras(cam_i);
-
-  ray3 r = ray3{ x, cameras[cam_i].center() - x };
-  SampleWindow wi = sample(cam_i, r[d]);
-
-  float ncc_sum = 0.0f;
-  for (int j = 0, n = cams.size(); j < n; ++j) {
-    SampleWindow wj = sample(cams[j], r[d]);
-    ncc_sum += NormalizedCrossCorrelation(wi, wj).w;
-  }
-
-  return ncc_sum;
-}
-
-float GraphCutOptimizer::vote(point3 x, int cam_id)
-{
-  const int d_num = 64;
-  static const float d[d_num] = {
-    0.0, 0.015625, 0.03125, 0.046875, 0.0625, 0.078125, 0.09375, 0.109375,
-    0.125, 0.140625, 0.15625, 0.171875, 0.1875, 0.203125, 0.21875, 0.234375,
-    0.25, 0.265625, 0.28125, 0.296875, 0.3125, 0.328125, 0.34375, 0.359375,
-    0.375, 0.390625, 0.40625, 0.421875, 0.4375, 0.453125, 0.46875, 0.484375,
-    0.5, 0.515625, 0.53125, 0.546875, 0.5625, 0.578125, 0.59375, 0.609375,
-    0.625, 0.640625, 0.65625, 0.671875, 0.6875, 0.703125, 0.71875, 0.734375,
-    0.75, 0.765625, 0.78125, 0.796875, 0.8125, 0.828125, 0.84375, 0.859375,
-    0.875, 0.890625, 0.90625, 0.921875, 0.9375, 0.953125, 0.96875, 0.984375
-  };
-
-  // compute and combine correlation scores
-  float s[d_num];
-  for (int i = 0; i < d_num; ++i)
-    s[i] = compute_correlation_score(x, cam_id, d[i]);
-
-  // Estimation with Parzen Window
-  float c[d_num];
-  for (int i = 0; i < d_num; ++i) {
-    float sum = 0.0f;
-    sum += s[std::max(i-3,0)] * 0.004f;
-    sum += s[std::max(i-2,0)] * 0.054f;
-    sum += s[std::max(i-1,0)] * 0.242f;
-    sum += s[i] * 0.399f;
-    sum += s[std::min(i+1,d_num-1)] * 0.242f;
-    sum += s[std::min(i+2,d_num-1)] * 0.054f;
-    sum += s[std::min(i+3,d_num-1)] * 0.004f;
-    c[i] = sum;
-  }
-
-  float c0 = c[0];
-  if (std::all_of(c, c+d_num, [c0](float x)->bool{ return (c0>x); })) {
-    return c0;
-  } else {
-    return 0.0f;
-  }
+  return expf(param_mju * sum);
 }
 
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 {
-  GraphCutOptimizer optimizer(cameras);
-
-  // Initialize
-  optimizer.model_center = (point3)model.real_box.center();
-
   // Allocate Graph
   using GridGraph = GridGraph_3D_6C<float, float, double>;
   GridGraph graph(model.width, model.height, model.depth);
 
+  //
+  float voxel_h = (float)model.real_box.extent().x() / model.width;
+  float param_lambda = 0.5f;
+
   // Setup Graph - Visual Hull
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
+    float weight = param_lambda * powf(voxel_h, 3.0f);
 
     uint64_t s = 0, n = voxels.size();
     for (uint64_t i = 0; i < n; ++i) {
@@ -262,11 +198,11 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       uint64_t m = voxels[i];
       for (; s < m; ++s) {
         morton_decode(s, x, y, z);
-        graph.set_terminal_cap(graph.node_id(x, y, z), 0, INFINITY);
+        graph.set_terminal_cap(graph.node_id(x, y, z), 0.0f, INFINITY);
       }
 
       morton_decode(m, x, y, z);
-      graph.set_terminal_cap(graph.node_id(x, y, z), 1.0f, 0);
+      graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0f);
 
       s = m + 1;
     }
@@ -274,25 +210,39 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
     for (; s < n; ++s) {
       uint32_t x, y, z;
       morton_decode(s, x, y, z);
-      graph.set_terminal_cap(graph.node_id(x, y, z), 0, INFINITY);
+      graph.set_terminal_cap(graph.node_id(x, y, z), 0.0f, INFINITY);
     }
   }
 
   // Setup Graph - Photo Consistency
   {
+    PhotoConsistency pc(model.real_box, cameras);
+    float weight = 4.0f / 3.0f * float(M_PI) * voxel_h * voxel_h;
+
     for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
       uint32_t x, y, z;
       morton_decode(m, x, y, z);
       int node = graph.node_id(x, y, z);
-      if (x > 0)
-        graph.set_neighbor_cap(node,-1, 0, 0, 0.125f);
-      if (y > 0)
-        graph.set_neighbor_cap(node, 0,-1, 0, 0.125f);
-      if (z > 0)
-        graph.set_neighbor_cap(node, 0, 0,-1, 0.125f);
+      AABox vbox = model.element_box(m);
+      vec3 center = vbox.center();
+      vec3 minpos = vbox.minpos;
+      if (x > 0) {
+        // midpoint of [x,y,z] and [x-1,y,z]
+        float w = weight * pc.compute(copy_x(center, minpos));
+        graph.set_neighbor_cap(node,-1, 0, 0, w);
+      }
+      if (y > 0) {
+        // midpoint of [x,y,z] and [x,y-1,z]
+        float w = weight * pc.compute(copy_y(center, minpos));
+        graph.set_neighbor_cap(node, 0,-1, 0, w);
+      }
+      if (z > 0) {
+        // midpoint of [x,y,z] and [x,y,z-1]
+        float w = weight * pc.compute(copy_z(center, minpos));
+        graph.set_neighbor_cap(node, 0, 0,-1, w);
+      }
     }
   }
-  optimizer.clear_images();
 
   // Optimize
   graph.compute_maxflow();
