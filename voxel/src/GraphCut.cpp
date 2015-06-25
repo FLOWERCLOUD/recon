@@ -199,8 +199,10 @@ struct PhotoConsistency {
 
     SampleWindow wi = sample(cam_i, pos);
 
-    QList<float> sjdk, dk;
+    const int max_nk = 128;
+    float sjdk[max_nk], dk[max_nk];
     int nk = 0;
+
     for (int cam_j : closest_cameras(cam_i)) {
       float dstep = depth_step(cam_j, o);
       bool first = true;
@@ -212,10 +214,10 @@ struct PhotoConsistency {
           first = false;
         } else {
           float diff = (s - last_s);
-          if ((diff < 0.0f && last_derivative >= 0.0f)) {
+          if ((diff < 0.0f && last_derivative >= 0.0f) && nk < max_nk) {
             // this is local maxima
-            sjdk.append(last_s);
-            dk.append(d - dstep);
+            sjdk[nk] = last_s;
+            dk[nk] = d - dstep;
             nk++;
           }
           last_derivative = diff;
@@ -258,7 +260,7 @@ struct PhotoConsistency {
     for (int i = 0, n = cameras.size(); i < n; ++i) {
       sum += vote(i, (point3)pos);
     }
-    printf("c(%f,%f,%f) = %f\n", (float)pos.x(), (float)pos.y(), (float)pos.z(), sum);
+    //printf("c(%f,%f,%f) = %f\n", (float)pos.x(), (float)pos.y(), (float)pos.z(), sum);
     return expf(-param_mju * sum);
   }
 
@@ -272,12 +274,13 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   //
   float voxel_h = (float)model.real_box.extent().x() / model.width;
-  float param_lambda = 0.5f;
+  float param_lambda = 1.0f;
 
   // Setup Graph - Visual Hull
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
     float weight = param_lambda * powf(voxel_h, 3.0f);
+    printf("Wb = %f\n", weight);
 
     uint64_t s = 0, n = voxels.size();
     for (uint64_t i = 0; i < n; ++i) {
@@ -313,21 +316,22 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       AABox vbox = model.element_box(m);
       vec3 center = (vec3)vbox.center();
       vec3 minpos = (vec3)vbox.minpos;
+      printf("m=%lld\n", m);
       if (x > 0) {
         // midpoint of [x,y,z] and [x-1,y,z]
-        printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
+        //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
         float w = weight * pc.compute(copy_x(center, minpos));
         graph.set_neighbor_cap(node,-1, 0, 0, w);
       }
       if (y > 0) {
         // midpoint of [x,y,z] and [x,y-1,z]
-        printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
+        //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
         float w = weight * pc.compute(copy_y(center, minpos));
         graph.set_neighbor_cap(node, 0,-1, 0, w);
       }
       if (z > 0) {
         // midpoint of [x,y,z] and [x,y,z-1]
-        printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
+        //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
         float w = weight * pc.compute(copy_z(center, minpos));
         graph.set_neighbor_cap(node, 0, 0,-1, w);
       }

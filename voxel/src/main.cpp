@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
   //  qDebug() << "mask path = " << cam.maskPath();
   //}
 
-  recon::VoxelModel model(7, loader.model_boundingbox());
+  recon::VoxelModel model(5, loader.model_boundingbox());
   recon::VoxelList vlist = graph_cut(model, cameras);
   save_ply("voxels.ply", model, vlist);
 
