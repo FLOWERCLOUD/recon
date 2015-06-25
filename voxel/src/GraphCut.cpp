@@ -16,6 +16,10 @@
 #define M_PI 3.141592653589793
 #endif
 
+#ifndef M_RSQRTPI
+#define M_RSQRTPI 0.5641895835477563
+#endif
+
 #ifndef M_RSQRT2
 #define M_RSQRT2 0.7071067811865476
 #endif
@@ -29,9 +33,9 @@ using vectormath::aos::utils::ray3;
 
 struct SampleWindow {
   int32_t valid;
-  uint32_t red[121];
-  uint32_t green[121];
-  uint32_t blue[121];
+  uint8_t red[121];
+  uint8_t green[121];
+  uint8_t blue[121];
 
   SampleWindow(const QImage& image, vec3 xy)
   : valid(false)
@@ -81,12 +85,12 @@ struct NormalizedCrossCorrelation {
     vec3 s1 = vec3::zero(), s2 = vec3::zero();
     for (int i = 0; i < 121; ++i) {
       vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
-      v1 = RGB_TO_YUV * v1;
+      v1 = RGB_TO_YUV * v1 / 255.0f;
       s1 = s1 + square(v1) / 121.0f;
     }
     for (int i = 0; i < 121; ++i) {
       vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
-      v2 = RGB_TO_YUV * v2;
+      v2 = RGB_TO_YUV * v2 / 255.0f;
       s2 = s2 + square(v2) / 121.0f;
     }
     s1 = rsqrt(s1);
@@ -96,9 +100,9 @@ struct NormalizedCrossCorrelation {
     for (int i = 0; i < 121; ++i) {
       vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
       vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
-      v1 = RGB_TO_YUV * v1;
-      v2 = RGB_TO_YUV * v2;
-      ncc = ncc + mul(mul(v1, s1), mul(v2, s2));
+      v1 = RGB_TO_YUV * v1 / 255.0f;
+      v2 = RGB_TO_YUV * v2 / 255.0f;
+      ncc = ncc + mul(mul(v1, s1), mul(v2, s2)) / 121.0f;
     }
 
     this->y = (float)ncc.x();
@@ -108,14 +112,23 @@ struct NormalizedCrossCorrelation {
   }
 };
 
+static float gaussian(float x, float sigma = 1.0f)
+{
+  float a = 1.0f / sigma * M_RSQRTPI * M_RSQRT2;
+  float c = sigma * sigma;
+  return expf(-0.5f * (x*x) / c) * a;
+}
+
 struct PhotoConsistency {
   AABox model_box;
+  float voxel_size;
   QList<Camera> cameras;
   std::vector<QList<int>> closest_camera_lists;
   std::vector<QImage> images;
 
-  PhotoConsistency(AABox mbox, const QList<Camera>& cams)
-  : model_box(mbox)
+  PhotoConsistency(const VoxelModel& model, const QList<Camera>& cams)
+  : model_box(model.real_box)
+  , voxel_size((float)model.real_box.extent().x() / model.width)
   , cameras(cams)
   , closest_camera_lists(cams.size())
   , images(cams.size())
@@ -151,23 +164,102 @@ struct PhotoConsistency {
     return images[cam_id];
   }
 
+  SampleWindow sample(int cam_i, point3 pos)
+  {
+    Camera cam = cameras[cam_i];
+    QImage img = image(cam_i);
+    mat4 txfm = cam.intrinsicForImage(img.width(), img.height());
+    txfm = txfm * cam.extrinsic();
+    return SampleWindow(img, proj_vec3(transform(txfm, pos)));
+  }
+
+  float depth_step(int cam_i, ray3 o)
+  {
+    Camera cam = cameras[cam_i];
+    QImage img = image(cam_i);
+    mat4 txfm = cam.intrinsicForImage(img.width(), img.height());
+    txfm = txfm * cam.extrinsic();
+
+    vec3 xy0 = proj_vec3(transform(txfm, o[0.0f]));
+    vec3 xy1 = proj_vec3(transform(txfm, o[1.0f]));
+    float dx = float(xy1.x() - xy0.x());
+    float dy = float(xy1.y() - xy0.y());
+    // Digital Differential Analysis
+    if (fabsf(dx) >= fabsf(dy)) {
+      return 1.0f / fabsf(dx);
+    } else {
+      return 1.0f / fabsf(dy);
+    }
+  }
+
   float vote(int cam_i, point3 pos)
   {
-    // TODO
-    return 0.0f;
+    ray3 o = ray3::make(pos, cameras[cam_i].center());
+    float h = voxel_size;
+
+    SampleWindow wi = sample(cam_i, pos);
+
+    QList<float> sjdk, dk;
+    int nk = 0;
+    for (int cam_j : closest_cameras(cam_i)) {
+      float dstep = depth_step(cam_j, o);
+      bool first = true;
+      float last_derivative = 1.0f;
+      float last_s = 0.0f;
+      for (float d = 0.0f; d <= h; d += dstep) {
+        float s = NormalizedCrossCorrelation(wi, sample(cam_j, o[d])).w;
+        if (first) {
+          first = false;
+        } else {
+          float diff = (s - last_s);
+          if ((diff < 0.0f && last_derivative >= 0.0f)) {
+            // this is local maxima
+            sjdk.append(last_s);
+            dk.append(d - dstep);
+            nk++;
+          }
+          last_derivative = diff;
+        }
+        last_s = s;
+      }
+    }
+
+    if (nk == 0)
+      return 0.0f;
+
+    // compute c0
+    float c0 = 0.0f;
+    for (int k = 0; k < nk; ++k) {
+      c0 += sjdk[k] * gaussian(dk[k]);
+    }
+
+    // check if c0 is global maximum
+    bool result = true;
+    for (int i = 0; i < nk; ++i) {
+      float d = dk[i], c = 0.0f;
+      for (int k = 0; k < nk; ++k)
+        c += sjdk[k] * gaussian(d - dk[k]);
+      if (c0 < c) {
+        result = false;
+        break;
+      }
+    }
+
+    return (result ? c0 : 0.0f);
   }
 
   float compute(vec3 pos)
   {
     const float param_mju = 0.05f;
 
-    return 0.001f; // TODO: remove it
+    //return 0.001f; // TODO: remove it
 
     float sum = 0.0f;
     for (int i = 0, n = cameras.size(); i < n; ++i) {
       sum += vote(i, (point3)pos);
     }
-    return expf(param_mju * sum);
+    printf("c(%f,%f,%f) = %f\n", (float)pos.x(), (float)pos.y(), (float)pos.z(), sum);
+    return expf(-param_mju * sum);
   }
 
 };
@@ -211,7 +303,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   // Setup Graph - Photo Consistency
   {
-    PhotoConsistency pc(model.real_box, cameras);
+    PhotoConsistency pc(model, cameras);
     float weight = 4.0f / 3.0f * float(M_PI) * voxel_h * voxel_h;
 
     for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
@@ -223,16 +315,19 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       vec3 minpos = (vec3)vbox.minpos;
       if (x > 0) {
         // midpoint of [x,y,z] and [x-1,y,z]
+        printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
         float w = weight * pc.compute(copy_x(center, minpos));
         graph.set_neighbor_cap(node,-1, 0, 0, w);
       }
       if (y > 0) {
         // midpoint of [x,y,z] and [x,y-1,z]
+        printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
         float w = weight * pc.compute(copy_y(center, minpos));
         graph.set_neighbor_cap(node, 0,-1, 0, w);
       }
       if (z > 0) {
         // midpoint of [x,y,z] and [x,y,z-1]
+        printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
         float w = weight * pc.compute(copy_z(center, minpos));
         graph.set_neighbor_cap(node, 0, 0,-1, w);
       }
