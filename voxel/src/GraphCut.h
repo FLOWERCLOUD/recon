@@ -35,6 +35,6 @@ namespace recon {
 
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras);
 
-QList<uint32_t> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras);
+QList<float> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras);
 
 }

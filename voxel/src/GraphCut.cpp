@@ -32,27 +32,30 @@ using vectormath::aos::utils::point3;
 using vectormath::aos::utils::ray3;
 
 struct SampleWindow {
-  int32_t valid;
   uint8_t red[121];
   uint8_t green[121];
   uint8_t blue[121];
 
   SampleWindow(const QImage& image, vec3 xy)
-  : valid(false)
   {
     int width = image.width(), height = image.height();
     int px = (float)xy.x(), py = (float)xy.y();
-    int px0 = px - 5, px1 = px + 5, py0 = py - 5, py1 = py + 5;
+    int px0 = px - 5, py0 = py - 5;
 
-    if (px0 >= 0 && py0 >= 0 && px1 < width && py1 < height) {
-      this->valid = true;
-      for (int i = 0; i < 11; ++i) {
-        for (int j = 0; j < 11; ++j) {
-          QRgb c = image.pixel(px0 + j, py0 + i);
-          this->red[i*11+j] = qRed(c);
-          this->green[i*11+j] = qGreen(c);
-          this->blue[i*11+j] = qBlue(c);
-        }
+    for (int i = 0; i < 11; ++i) {
+      for (int j = 0; j < 11; ++j) {
+        int x = px0 + j, y = py0 + i;
+        x = (x < 0 ? 0 : x);
+        x = (x < width ? x : width-1);
+        y = (y < 0 ? 0 : y);
+        y = (y < height ? y : height-1);
+
+        QRgb c = image.pixel(x, y);
+
+        int index = (i) * 11 + (j);
+        this->red[ index ] = qRed(c);
+        this->green[ index ] = qGreen(c);
+        this->blue[ index ] = qBlue(c);
       }
     }
   }
@@ -65,16 +68,14 @@ static const mat3 RGB_TO_YUV = mat3{
 };
 
 struct NormalizedCrossCorrelation {
-  float y, u, v, w;
+  float value;
 
   NormalizedCrossCorrelation(const SampleWindow& wi, const SampleWindow& wj)
-  : y(0.0f), u(0.0f), v(0.0f), w(0.0f)
+  : value(compute(wi, wj))
   {
-    if (wi.valid && wj.valid)
-      compute(wi, wj);
   }
 
-  void compute(const SampleWindow& wi, const SampleWindow& wj)
+  static float compute(const SampleWindow& wi, const SampleWindow& wj)
   {
     vec3 avg1 = vec3::zero(), avg2 = vec3::zero();
     for (int i = 0; i < 121; ++i)
@@ -86,12 +87,12 @@ struct NormalizedCrossCorrelation {
     for (int i = 0; i < 121; ++i) {
       vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
       v1 = RGB_TO_YUV * v1;
-      s1 = s1 + square(v1) / 121.0f;
+      s1 = s1 + square(v1);
     }
     for (int i = 0; i < 121; ++i) {
       vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
       v2 = RGB_TO_YUV * v2;
-      s2 = s2 + square(v2) / 121.0f;
+      s2 = s2 + square(v2);
     }
     s1 = rsqrt(s1);
     s2 = rsqrt(s2);
@@ -102,13 +103,18 @@ struct NormalizedCrossCorrelation {
       vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
       v1 = RGB_TO_YUV * v1;
       v2 = RGB_TO_YUV * v2;
-      ncc = ncc + mul(mul(v1, s1), mul(v2, s2)) / 121.0f;
+      ncc = ncc + mul(mul(v1, s1), mul(v2, s2));
     }
 
-    this->y = (float)ncc.x();
-    this->u = (float)ncc.y();
-    this->v = (float)ncc.z();
-    this->w = 0.5f * this->y + 0.25f * this->u + 0.25f * this->v;
+    float y = (float)ncc.x();
+    float u = (float)ncc.y();
+    float v = (float)ncc.z();
+    return 0.5f * y + 0.25f * u + 0.25f * v;
+  }
+
+  inline operator float() const
+  {
+    return value;
   }
 };
 
@@ -203,13 +209,17 @@ struct PhotoConsistency {
     float sjdk[max_nk], dk[max_nk];
     int nk = 0;
 
+    // TODO: the code below might be wrong!
     for (int cam_j : closest_cameras(cam_i)) {
       float dstep = depth_step(cam_j, o);
       bool first = true;
       float last_derivative = 1.0f;
       float last_s = 0.0f;
       for (float d = 0.0f; d <= h; d += dstep) {
-        float s = NormalizedCrossCorrelation(wi, sample(cam_j, o[d])).w;
+        float s = NormalizedCrossCorrelation(wi, sample(cam_j, o[d]));
+        if (isnan(s))
+          continue;
+        //printf("s = %f\n", s);
         if (first) {
           first = false;
         } else {
@@ -219,6 +229,8 @@ struct PhotoConsistency {
             sjdk[nk] = last_s;
             dk[nk] = d - dstep;
             nk++;
+            if (nk == max_nk)
+              break;
           }
           last_derivative = diff;
         }
@@ -274,7 +286,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   //
   float voxel_h = (float)model.virtual_box.extent().x() / model.width;
-  float param_lambda = 100.0f; // TODO: 0.5f
+  float param_lambda = 50.0f; // TODO: 0.5f
 
   // Setup Graph - Visual Hull
   {
@@ -369,9 +381,40 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   return result;
 }
 
-QList<uint32_t> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras)
+QList<float> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras)
 {
+  QList<float> colors;
 
+  PhotoConsistency pc(model, cameras);
+  float voxel_h = pc.voxel_size;
+  float weight = 4.0f / 3.0f * float(M_PI) * voxel_h * voxel_h;
+
+  for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
+    uint32_t x, y, z;
+    morton_decode(m, x, y, z);
+    AABox vbox = model.element_box(m);
+    vec3 center = (vec3)vbox.center();
+    vec3 minpos = (vec3)vbox.minpos;
+    //printf("m=%lld\n", m);
+    if (x > 0) {
+      // midpoint of [x,y,z] and [x-1,y,z]
+      //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
+      float w = weight * pc.compute(copy_x(center, minpos));
+
+    }
+    if (y > 0) {
+      // midpoint of [x,y,z] and [x,y-1,z]
+      //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
+      float w = weight * pc.compute(copy_y(center, minpos));
+    }
+    if (z > 0) {
+      // midpoint of [x,y,z] and [x,y,z-1]
+      //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
+      float w = weight * pc.compute(copy_z(center, minpos));
+    }
+  }
+
+  return colors;
 }
 
 }
