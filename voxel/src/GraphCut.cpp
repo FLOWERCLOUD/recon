@@ -128,7 +128,7 @@ struct PhotoConsistency {
 
   PhotoConsistency(const VoxelModel& model, const QList<Camera>& cams)
   : model_box(model.real_box)
-  , voxel_size((float)model.real_box.extent().x() / model.width)
+  , voxel_size((float)model.virtual_box.extent().x() / model.width)
   , cameras(cams)
   , closest_camera_lists(cams.size())
   , images(cams.size())
@@ -274,7 +274,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   //
   float voxel_h = (float)model.virtual_box.extent().x() / model.width;
-  float param_lambda = 1000.0f; // TODO: 0.5f
+  float param_lambda = 100.0f; // TODO: 0.5f
 
   // Setup Graph - Visual Hull
   {
