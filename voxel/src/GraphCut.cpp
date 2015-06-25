@@ -85,12 +85,12 @@ struct NormalizedCrossCorrelation {
     vec3 s1 = vec3::zero(), s2 = vec3::zero();
     for (int i = 0; i < 121; ++i) {
       vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
-      v1 = RGB_TO_YUV * v1 / 255.0f;
+      v1 = RGB_TO_YUV * v1;
       s1 = s1 + square(v1) / 121.0f;
     }
     for (int i = 0; i < 121; ++i) {
       vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
-      v2 = RGB_TO_YUV * v2 / 255.0f;
+      v2 = RGB_TO_YUV * v2;
       s2 = s2 + square(v2) / 121.0f;
     }
     s1 = rsqrt(s1);
@@ -100,8 +100,8 @@ struct NormalizedCrossCorrelation {
     for (int i = 0; i < 121; ++i) {
       vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
       vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
-      v1 = RGB_TO_YUV * v1 / 255.0f;
-      v2 = RGB_TO_YUV * v2 / 255.0f;
+      v1 = RGB_TO_YUV * v1;
+      v2 = RGB_TO_YUV * v2;
       ncc = ncc + mul(mul(v1, s1), mul(v2, s2)) / 121.0f;
     }
 
@@ -214,7 +214,7 @@ struct PhotoConsistency {
           first = false;
         } else {
           float diff = (s - last_s);
-          if ((diff < 0.0f && last_derivative >= 0.0f) && nk < max_nk) {
+          if ((diff < 0.0f && last_derivative > 0.0f) && nk < max_nk) {
             // this is local maxima
             sjdk[nk] = last_s;
             dk[nk] = d - dstep;
@@ -254,7 +254,7 @@ struct PhotoConsistency {
   {
     const float param_mju = 0.05f;
 
-    //return 0.001f; // TODO: remove it
+    //return 0.0000001f; // TODO: remove it
 
     float sum = 0.0f;
     for (int i = 0, n = cameras.size(); i < n; ++i) {
@@ -274,12 +274,12 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   //
   float voxel_h = (float)model.real_box.extent().x() / model.width;
-  float param_lambda = 1.0f;
+  float param_lambda = 1000.0f;
 
   // Setup Graph - Visual Hull
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
-    float weight = param_lambda * powf(voxel_h, 3.0f);
+    float weight = param_lambda * voxel_h * voxel_h * voxel_h;
     printf("Wb = %f\n", weight);
 
     uint64_t s = 0, n = voxels.size();
@@ -316,23 +316,26 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       AABox vbox = model.element_box(m);
       vec3 center = (vec3)vbox.center();
       vec3 minpos = (vec3)vbox.minpos;
-      printf("m=%lld\n", m);
+      //printf("m=%lld\n", m);
       if (x > 0) {
         // midpoint of [x,y,z] and [x-1,y,z]
         //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
         float w = weight * pc.compute(copy_x(center, minpos));
+        printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
         graph.set_neighbor_cap(node,-1, 0, 0, w);
       }
       if (y > 0) {
         // midpoint of [x,y,z] and [x,y-1,z]
         //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
         float w = weight * pc.compute(copy_y(center, minpos));
+        printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
         graph.set_neighbor_cap(node, 0,-1, 0, w);
       }
       if (z > 0) {
         // midpoint of [x,y,z] and [x,y,z-1]
         //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
         float w = weight * pc.compute(copy_z(center, minpos));
+        printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
         graph.set_neighbor_cap(node, 0, 0,-1, w);
       }
     }
@@ -364,6 +367,11 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   }
 
   return result;
+}
+
+QList<uint32_t> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras)
+{
+
 }
 
 }

@@ -1,6 +1,7 @@
 #include "VoxelModel.h"
 #include "morton_code.h"
 #include <QtGlobal>
+#include <QColor>
 
 namespace recon {
 
@@ -86,6 +87,34 @@ void save_ply(const QString& path, const VoxelModel& model, const VoxelList& vli
   }
 
   mesh.need_tstrips();
+  mesh.write(path.toUtf8().constData());
+}
+
+void save_ply(const QString& path, const VoxelModel& model, const QList<uint32_t>& colors)
+{
+  uint64_t count = 0;
+  for (uint32_t c : colors)
+    if (qAlpha(c) != 0)
+      count++;
+
+  trimesh::TriMesh mesh;
+  mesh.vertices.reserve(count);
+  mesh.colors.reserve(count);
+
+  for (uint64_t m = 0; m < count; ++m) {
+    uint32_t color = colors[m];
+    if (qAlpha(color) == 0)
+      continue;
+
+    point3 pos = model.element_box(m).center();
+
+    trimesh::point pt = { (float)pos.x(), (float)pos.y(), (float)pos.z() };
+    trimesh::Color c = { qRed(color), qGreen(color), qBlue(color) };
+
+    mesh.vertices.push_back(pt);
+    mesh.colors.push_back(c);
+  }
+
   mesh.write(path.toUtf8().constData());
 }
 
