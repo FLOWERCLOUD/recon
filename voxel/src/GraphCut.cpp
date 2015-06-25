@@ -273,8 +273,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   GridGraph graph(model.width, model.height, model.depth);
 
   //
-  float voxel_h = (float)model.real_box.extent().x() / model.width;
-  float param_lambda = 1000.0f;
+  float voxel_h = (float)model.virtual_box.extent().x() / model.width;
+  float param_lambda = 1000.0f; // TODO: 0.5f
 
   // Setup Graph - Visual Hull
   {
