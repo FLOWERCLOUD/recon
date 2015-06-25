@@ -115,75 +115,14 @@ struct PhotoConsistency {
   float vote(int cam_i, point3 pos)
   {
     ray3 o = ray3::make(pos, cameras[cam_i].center());
-    float h = voxel_size;
-
     SampleWindow wi = sample(cam_i, pos);
-    /*
-    SampleWindow wi_neg = wi;
-    for (int i = 0; i < 121; ++i) {
-      wi_neg.red[i] = 255 - wi.red[i];
-      wi_neg.green[i] = 255 - wi.green[i];
-      wi_neg.blue[i] = 255 - wi.blue[i];
-    }
-    printf("ncc(pos,pos) = %f\n", (float)NormalizedCrossCorrelation(wi, wi));
-    printf("ncc(pos,neg) = %f\n", (float)NormalizedCrossCorrelation(wi, wi_neg));
-    */
 
-    const int max_nk = 128;
-    float sjdk[max_nk], dk[max_nk];
-    int nk = 0;
-
-    // TODO: the code below might be wrong!
-    for (int cam_j : closest_cameras(cam_i)) {
-      float dstep = depth_step(cam_j, o); // FIXME: depth_step is not constant along the ray!
-      bool first = true;
-      float last_derivative = 1.0f;
-      float last_s = 0.0f;
-      for (float d = 0.0f; d <= h; d += dstep) {
-        float s = NormalizedCrossCorrelation(wi, sample(cam_j, o[d]));
-        if (isnan(s))
-          continue;
-        //printf("s = %f\n", s);
-        if (first) {
-          first = false;
-        } else {
-          float diff = (s - last_s);
-          if ((diff < 0.0f && last_derivative > 0.0f) && nk < max_nk) {
-            // this is local maxima
-            sjdk[nk] = last_s;
-            dk[nk] = d - dstep;
-            nk++;
-            if (nk == max_nk)
-              break;
-          }
-          last_derivative = diff;
-        }
-        last_s = s;
-      }
-    }
-
-    if (nk == 0)
-      return 0.0f;
-
-    // compute c0
     float c0 = 0.0f;
-    for (int k = 0; k < nk; ++k) {
-      c0 += sjdk[k] * gaussian(dk[k]);
+    for (int cam_j : closest_cameras(cam_i)) {
+      c0 += NormalizedCrossCorrelation(wi, sample(cam_j, o[0]));
     }
 
-    // check if c0 is global maximum
-    bool result = true;
-    for (int i = 0; i < nk; ++i) {
-      float d = dk[i], c = 0.0f;
-      for (int k = 0; k < nk; ++k)
-        c += sjdk[k] * gaussian(d - dk[k]);
-      if (c0 < c) {
-        result = false;
-        break;
-      }
-    }
-
-    return (result ? c0 : 0.0f);
+    return c0;
   }
 
   float compute(vec3 pos)
@@ -210,7 +149,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   //
   float voxel_h = (float)model.virtual_box.extent().x() / model.width;
-  float param_lambda = 50.0f; // TODO: 0.5f
+  float param_lambda = 0.5f; // TODO: 0.5f
 
   // Setup Graph - Visual Hull
   {
