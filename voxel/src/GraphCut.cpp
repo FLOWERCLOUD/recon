@@ -71,11 +71,11 @@ struct NormalizedCrossCorrelation {
   float value;
 
   NormalizedCrossCorrelation(const SampleWindow& wi, const SampleWindow& wj)
-  : value(compute(wi, wj))
+  : value(zncc(wi, wj))
   {
   }
 
-  static float compute(const SampleWindow& wi, const SampleWindow& wj)
+  static float zncc(const SampleWindow& wi, const SampleWindow& wj)
   {
     vec3 avg1 = vec3::zero(), avg2 = vec3::zero();
     for (int i = 0; i < 121; ++i)
@@ -109,6 +109,14 @@ struct NormalizedCrossCorrelation {
     float y = (float)ncc.x();
     float u = (float)ncc.y();
     float v = (float)ncc.z();
+
+    if (isnan(y))
+      y = 1.0f;
+    if (isnan(u))
+      u = 1.0f;
+    if (isnan(v))
+      v = 1.0f;
+
     return 0.5f * y + 0.25f * u + 0.25f * v;
   }
 
@@ -192,9 +200,9 @@ struct PhotoConsistency {
     float dy = float(xy1.y() - xy0.y());
     // Digital Differential Analysis
     if (fabsf(dx) >= fabsf(dy)) {
-      return 1.0f / fabsf(dx);
+      return 1.0f / ceilf(fabsf(dx));
     } else {
-      return 1.0f / fabsf(dy);
+      return 1.0f / ceilf(fabsf(dy));
     }
   }
 
@@ -204,6 +212,16 @@ struct PhotoConsistency {
     float h = voxel_size;
 
     SampleWindow wi = sample(cam_i, pos);
+    /*
+    SampleWindow wi_neg = wi;
+    for (int i = 0; i < 121; ++i) {
+      wi_neg.red[i] = 255 - wi.red[i];
+      wi_neg.green[i] = 255 - wi.green[i];
+      wi_neg.blue[i] = 255 - wi.blue[i];
+    }
+    printf("ncc(pos,pos) = %f\n", (float)NormalizedCrossCorrelation(wi, wi));
+    printf("ncc(pos,neg) = %f\n", (float)NormalizedCrossCorrelation(wi, wi_neg));
+    */
 
     const int max_nk = 128;
     float sjdk[max_nk], dk[max_nk];
@@ -211,7 +229,7 @@ struct PhotoConsistency {
 
     // TODO: the code below might be wrong!
     for (int cam_j : closest_cameras(cam_i)) {
-      float dstep = depth_step(cam_j, o);
+      float dstep = depth_step(cam_j, o); // FIXME: depth_step is not constant along the ray!
       bool first = true;
       float last_derivative = 1.0f;
       float last_s = 0.0f;
