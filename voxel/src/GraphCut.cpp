@@ -114,68 +114,63 @@ struct PhotoConsistency {
   std::vector<QList<int>> closest_camera_lists;
   std::vector<QImage> images;
 
-  PhotoConsistency(AABox mbox, const QList<Camera>& cameras);
-  QList<int> closest_cameras(int cam_i);
-  QImage image(int cam_id);
-  float vote(int cam_i, point3 pos);
-  float compute(vec3 pos);
-};
+  PhotoConsistency(AABox mbox, const QList<Camera>& cams)
+  : model_box(mbox)
+  , cameras(cams)
+  , closest_camera_lists(cams.size())
+  , images(cams.size())
+  {
+  }
 
-PhotoConsistency::PhotoConsistency(AABox mbox, const QList<Camera>& cams)
-: model_box(mbox)
-, cameras(cams)
-, closest_camera_lists(cams.size())
-, images(cams.size())
-{
-}
+  QList<int> closest_cameras(int cam_i)
+  {
+    if (closest_camera_lists[cam_i].isEmpty()) {
+      QList<int> cams;
 
-QList<int> PhotoConsistency::closest_cameras(int cam_i)
-{
-  if (closest_camera_lists[cam_i].isEmpty()) {
-    QList<int> cams;
-
-    int n = cameras.size();
-    for (int i = 0; i < n; ++i) {
-      if (i == cam_i)
-        continue;
-      vec3 v0 = cameras[cam_i].center() - (point3)model_box.center();
-      vec3 v1 = cameras[i].center() - (point3)model_box.center();
-      if ((float)dot(normalize(v0), normalize(v1)) >= float(M_RSQRT2)) {
-        cams.append(i);
+      int n = cameras.size();
+      for (int i = 0; i < n; ++i) {
+        if (i == cam_i)
+          continue;
+        vec3 v0 = cameras[cam_i].center() - model_box.center();
+        vec3 v1 = cameras[i].center() - model_box.center();
+        if ((float)dot(normalize(v0), normalize(v1)) >= float(M_RSQRT2)) {
+          cams.append(i);
+        }
       }
+
+      closest_camera_lists[cam_i] = cams;
     }
-
-    closest_camera_lists[cam_i] = cams;
+    return closest_camera_lists[cam_i];
   }
-  return closest_camera_lists[cam_i];
-}
 
-QImage PhotoConsistency::image(int cam_id)
-{
-  if (images[cam_id].isNull()) {
-    images[cam_id] = QImage(cameras[cam_id].imagePath());
+  QImage image(int cam_id)
+  {
+    if (images[cam_id].isNull()) {
+      images[cam_id] = QImage(cameras[cam_id].imagePath());
+    }
+    return images[cam_id];
   }
-  return images[cam_id];
-}
 
-float PhotoConsistency::vote(int cam_i, point3 pos)
-{
-  // TODO
-  return 0.0f;
-}
-
-float PhotoConsistency::compute(vec3 pos)
-{
-  const float param_mju = 0.05f;
-
-  return 0.001f; // TODO: remove it
-
-  float sum = 0.0f;
-  for (int i = 0, n = cameras.size(); i < n; ++i) {
-    sum += vote(i, (point3)pos);
+  float vote(int cam_i, point3 pos)
+  {
+    // TODO
+    return 0.0f;
   }
-  return expf(param_mju * sum);
-}
+
+  float compute(vec3 pos)
+  {
+    const float param_mju = 0.05f;
+
+    return 0.001f; // TODO: remove it
+
+    float sum = 0.0f;
+    for (int i = 0, n = cameras.size(); i < n; ++i) {
+      sum += vote(i, (point3)pos);
+    }
+    return expf(param_mju * sum);
+  }
+
+};
 
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 {
@@ -224,8 +219,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       morton_decode(m, x, y, z);
       int node = graph.node_id(x, y, z);
       AABox vbox = model.element_box(m);
-      vec3 center = vbox.center();
-      vec3 minpos = vbox.minpos;
+      vec3 center = (vec3)vbox.center();
+      vec3 minpos = (vec3)vbox.minpos;
       if (x > 0) {
         // midpoint of [x,y,z] and [x-1,y,z]
         float w = weight * pc.compute(copy_x(center, minpos));

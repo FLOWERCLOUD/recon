@@ -22,7 +22,8 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
     real_box.extent().store(siz);
     vsiz = fmaxf(siz[0], fmaxf(siz[1], siz[2]));
 
-    vec3 start = real_box.minpos, extent = vec3(vsiz, vsiz, vsiz);
+    point3 start = real_box.minpos;
+    vec3 extent = vec3(vsiz, vsiz, vsiz);
     virtual_box = AABox(start, start + extent);
   }
 }

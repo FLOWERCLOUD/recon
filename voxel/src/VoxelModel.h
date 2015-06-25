@@ -13,6 +13,7 @@
 namespace recon {
 
 using vectormath::aos::vec3;
+using vectormath::aos::utils::point3;
 using vectormath::aos::utils::AABox;
 
 typedef QList<uint64_t> VoxelList;

@@ -28,7 +28,7 @@ VoxelList visual_hull(const VoxelModel& model, const QList<Camera>& cameras)
 
     for (uint64_t morton : old_voxels) {
       AABox vbox = model.element_box(morton);
-      vec3 pos = vbox.center();
+      vec3 pos = (vec3)vbox.center();
       pos = proj_vec3(transform * vec4(pos, 1.0f));
 
       QPoint pt2d = QPoint((float)pos.x(), (float)pos.y());

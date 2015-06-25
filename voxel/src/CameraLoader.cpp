@@ -147,10 +147,10 @@ bool CameraLoader::load_from_nvm(const QString& path)
       m_Features.append(feat);
 
       if (bbox_first) {
-        m_ModelBox = AABox(vec3::load(pos));
+        m_ModelBox = AABox(point3::load(pos));
         bbox_first = false;
       } else {
-        m_ModelBox.add(vec3::load(pos));
+        m_ModelBox.add(point3::load(pos));
       }
     }
   }
