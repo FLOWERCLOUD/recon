@@ -105,6 +105,7 @@ struct PhotoConsistency {
       for (int cam_j : closest_cameras(cam_i)) {
         c[k] += NormalizedCrossCorrelation(wi, sample(cam_j, o[d]));
       }
+      c[k] /= (float)closest_cameras(cam_i).size();
     }
 
     float c0 = c[0];
@@ -183,7 +184,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       if (x > 0) {
         if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
           float w = weight * pc.compute(copy_x(center, minpos));
-          printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
+          //printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
           graph.set_neighbor_cap(node,-1, 0, 0, w);
         } else {
           graph.set_neighbor_cap(node,-1, 0, 0, INFINITY);
@@ -192,7 +193,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       if (y > 0) {
         if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
           float w = weight * pc.compute(copy_y(center, minpos));
-          printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
+          //printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
           graph.set_neighbor_cap(node, 0,-1, 0, w);
         } else {
           graph.set_neighbor_cap(node, 0,-1, 0, INFINITY);
@@ -201,7 +202,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       if (z > 0) {
         if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
           float w = weight * pc.compute(copy_z(center, minpos));
-          printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
+          //printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
           graph.set_neighbor_cap(node, 0, 0,-1, w);
         } else {
           graph.set_neighbor_cap(node, 0, 0,-1, INFINITY);
@@ -238,40 +239,47 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   return result;
 }
 
-QList<float> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras)
+QImage photo_consistency_test(const VoxelModel& model, const QList<Camera>& cameras, int plane_y)
 {
-  QList<float> colors;
+  QImage canvas = QImage(model.width, model.depth, QImage::Format_ARGB32);
+  canvas.fill(qRgba(0, 0, 0, 0));
 
-  PhotoConsistency pc(model, cameras);
-  float voxel_h = pc.voxel_size;
-  float weight = 4.0f / 3.0f * float(M_PI) * voxel_h * voxel_h;
-
-  for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
+  QList<uint64_t> foreground_voxels = visual_hull(model, cameras);
+  for (uint64_t m : foreground_voxels) {
     uint32_t x, y, z;
     morton_decode(m, x, y, z);
-    AABox vbox = model.element_box(m);
-    vec3 center = (vec3)vbox.center();
-    vec3 minpos = (vec3)vbox.minpos;
-    //printf("m=%lld\n", m);
-    if (x > 0) {
-      // midpoint of [x,y,z] and [x-1,y,z]
-      //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
-      float w = weight * pc.compute(copy_x(center, minpos));
-
-    }
-    if (y > 0) {
-      // midpoint of [x,y,z] and [x,y-1,z]
-      //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
-      float w = weight * pc.compute(copy_y(center, minpos));
-    }
-    if (z > 0) {
-      // midpoint of [x,y,z] and [x,y,z-1]
-      //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
-      float w = weight * pc.compute(copy_z(center, minpos));
+    if (y == (uint32_t)plane_y) {
+      canvas.setPixel(x, z, qRgb(0, 0, 0));
     }
   }
 
-  return colors;
+  int cam_i = 0;
+  //int cam_j = 13;
+  //for (int cam_j : pc.closest_cameras(cam_i))
+  PhotoConsistency pc(model, cameras);
+
+  for (int i = 0; i < canvas.height(); ++i) {
+    for (int j = 0; j < canvas.width(); ++j) {
+      uint64_t morton = morton_encode(j, plane_y, i);
+      point3 pos = model.element_box(morton).center();
+      //ray3 o = ray3::make(pos, cameras[cam_i].center()); // length(diff) = 1
+
+      //SampleWindow wi = pc.sample(cam_i, pos);
+      //SampleWindow wj = pc.sample(cam_j, o[0.0f]);
+      //float ncc = NormalizedCrossCorrelation(wi, wj);
+      //ncc = fmaxf(ncc * 0.5f + 0.5f);
+
+      //float ncc = pc.vote(cam_i, pos);
+      float ncc = pc.compute((vec3)pos);
+      printf("%d %d\n", i, j);
+
+      int pix = (int)(fmaxf(ncc, 0.0f) * 255) & 0xFF;
+      int alpha = qAlpha(canvas.pixel(j,i));
+      canvas.setPixel(j,i,qRgba(pix, pix, pix, (alpha ? alpha : 128)));
+    }
+  }
+
+  return canvas;
 }
 
 }

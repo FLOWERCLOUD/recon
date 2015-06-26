@@ -30,11 +30,11 @@
 #include "Camera.h"
 #include "VoxelModel.h"
 #include <QList>
+#include <QImage>
 
 namespace recon {
 
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras);
-
-QList<float> photoconsist_test(const VoxelModel& model, const QList<Camera>& cameras);
+QImage photo_consistency_test(const VoxelModel& model, const QList<Camera>& cameras, int plane_y);
 
 }
