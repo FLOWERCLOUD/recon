@@ -36,5 +36,6 @@ namespace recon {
 
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras);
 QImage ncc_image(const VoxelModel& model, const QList<Camera>& cameras, int plane_y, int cam_i, int cam_j);
+QImage vote_image(const VoxelModel& model, const QList<Camera>& cameras, int plane_y, int cam_i);
 
 }

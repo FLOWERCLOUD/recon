@@ -253,4 +253,24 @@ QImage ncc_image(const VoxelModel& model,
   return canvas.mirrored();
 }
 
+QImage vote_image(const VoxelModel& model, const QList<Camera>& cameras, int plane_y, int cam_i)
+{
+  QImage canvas = QImage(model.width, model.depth, QImage::Format_ARGB32);
+  PhotoConsistency pc(model, cameras);
+
+  for (int i = 0; i < canvas.height(); ++i) {
+    for (int j = 0; j < canvas.width(); ++j) {
+      uint64_t morton = morton_encode(j, plane_y, i);
+      point3 pos = model.element_box(morton).center();
+
+      float v = pc.vote(cam_i, pos);
+
+      int pix = (int)(fminf(fmaxf(v, 0.0f), 1.0f) * 255) & 0xFF;
+      canvas.setPixel(j,i,qRgb(pix, pix, pix));
+    }
+  }
+
+  return canvas.mirrored();
+}
+
 }

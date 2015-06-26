@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
   //recon::VoxelList vlist = graph_cut(model, cameras);
   //recon::save_ply("voxels.ply", model, vlist);
   QImage img = recon::ncc_image(model, cameras, 30, 35, 36);
+  //QImage img = recon::vote_image(model, cameras, 30, 35);
   img.save("photo-consistency.png");
 
   return 0;
