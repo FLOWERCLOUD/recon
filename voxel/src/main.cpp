@@ -57,9 +57,29 @@ int main(int argc, char* argv[])
   recon::VoxelModel model(7, loader.model_boundingbox());
   //recon::VoxelList vlist = graph_cut(model, cameras);
   //recon::save_ply("voxels.ply", model, vlist);
-  QImage img = recon::ncc_image(model, cameras, 30, 35, 36);
-  //QImage img = recon::vote_image(model, cameras, 30, 35);
-  img.save("photo-consistency.png");
+
+  //QImage img = recon::ncc_image(model, cameras, 30, 35, 36);
+  //img.save("ncc-35-36.png");
+
+#if true
+  point3 model_center = model.real_box.center();
+  for (int i = 0; i < cameras.size(); ++i) {
+    for (int j = i+1; j < cameras.size(); ++j) {
+
+      printf("ncc for %d & %d\n", i, j);
+      QImage img = recon::ncc_image(model, cameras, 30, i, j);
+      img.save(QString("ncc-%1-%2.png").arg(i).arg(j));
+    }
+  }
+#endif
+
+#if 0
+  for (int i = 0; i < cameras.size(); ++i) {
+    printf("process vote-%d\n", i);
+    QImage img = recon::vote_image(model, cameras, 30, i);
+    img.save(QString("vote-%1.png").arg(i));
+  }
+#endif
 
   return 0;
 }

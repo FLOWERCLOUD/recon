@@ -93,23 +93,25 @@ struct PhotoConsistency {
     return SampleWindow(img, proj_vec3(transform(txfm, pos)));
   }
 
-  float vote(int cam_i, point3 pos)
+  float vote_1(int cam_i, point3 pos)
   {
     point3 ci = cameras[cam_i].center();
     ray3 o = ray3(pos, 0.5f * voxel_size * normalize(ci - pos));
     SampleWindow wi = sample(cam_i, pos);
 
-    // TODO
-    /*int n_local_maxima = 0;
-    float s[];
-    for (int k = 0; k <= 32; ++k) {
-      (k - 16)
-    }*/
-
-    return 0.0f;
+    float c0 = -1.0f;
+    for (int cam_j : closest_cameras(cam_i)) {
+      for (int k = -16; k <= 16; ++k) {
+        float d = float(k) / 16.0f;
+        SampleWindow wj = sample(cam_j, o[d]);
+        float s = NormalizedCrossCorrelation(wi, wj);
+        c0 = fmaxf(s, c0);
+      }
+    }
+    return c0;
   }
 
-  float compute(vec3 pos)
+  /*float compute(vec3 pos)
   {
     const float param_mju = 0.05f;
 
@@ -118,7 +120,7 @@ struct PhotoConsistency {
       sum += vote(i, (point3)pos);
     }
     return expf(-param_mju * sum);
-  }
+  }*/
 
 };
 
@@ -263,7 +265,7 @@ QImage vote_image(const VoxelModel& model, const QList<Camera>& cameras, int pla
       uint64_t morton = morton_encode(j, plane_y, i);
       point3 pos = model.element_box(morton).center();
 
-      float v = pc.vote(cam_i, pos);
+      float v = pc.vote_1(cam_i, pos);
 
       int pix = (int)(fminf(fmaxf(v, 0.0f), 1.0f) * 255) & 0xFF;
       canvas.setPixel(j,i,qRgb(pix, pix, pix));
