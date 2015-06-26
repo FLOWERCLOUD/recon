@@ -195,6 +195,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
           float w = weight * pc.compute(copy_x(center, minpos));
           printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
           graph.set_neighbor_cap(node,-1, 0, 0, w);
+        } else {
+          graph.set_neighbor_cap(node,-1, 0, 0, 0.0f);
         }
       }
       if (y > 0) {
@@ -202,6 +204,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
           float w = weight * pc.compute(copy_y(center, minpos));
           printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
           graph.set_neighbor_cap(node, 0,-1, 0, w);
+        } else {
+          graph.set_neighbor_cap(node, 0,-1, 0, 0.0f);
         }
       }
       if (z > 0) {
@@ -209,6 +213,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
           float w = weight * pc.compute(copy_z(center, minpos));
           printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
           graph.set_neighbor_cap(node, 0, 0,-1, w);
+        } else {
+          graph.set_neighbor_cap(node, 0, 0,-1, 0.0f);
         }
       }
     }
