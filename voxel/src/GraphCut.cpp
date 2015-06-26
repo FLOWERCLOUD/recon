@@ -93,33 +93,25 @@ struct PhotoConsistency {
     return SampleWindow(img, proj_vec3(transform(txfm, pos)));
   }
 
-  float depth_step(int cam_i, ray3 o)
-  {
-    Camera cam = cameras[cam_i];
-    QImage img = image(cam_i);
-    mat4 txfm = cam.intrinsicForImage(img.width(), img.height());
-    txfm = txfm * cam.extrinsic();
-
-    vec3 xy0 = proj_vec3(transform(txfm, o[0.0f]));
-    vec3 xy1 = proj_vec3(transform(txfm, o[1.0f]));
-    float dx = float(xy1.x() - xy0.x());
-    float dy = float(xy1.y() - xy0.y());
-    // Digital Differential Analysis
-    if (fabsf(dx) >= fabsf(dy)) {
-      return 1.0f / ceilf(fabsf(dx));
-    } else {
-      return 1.0f / ceilf(fabsf(dy));
-    }
-  }
-
   float vote(int cam_i, point3 pos)
   {
     ray3 o = ray3::make(pos, cameras[cam_i].center());
     SampleWindow wi = sample(cam_i, pos);
 
-    float c0 = 0.0f;
-    for (int cam_j : closest_cameras(cam_i)) {
-      c0 += NormalizedCrossCorrelation(wi, sample(cam_j, o[0]));
+    float c[16];
+    for (int k = 0; k < 16; ++k) {
+      c[k] = 0.0f;
+      float d = (float)k / 16.0f;
+      for (int cam_j : closest_cameras(cam_i)) {
+        c[k] += NormalizedCrossCorrelation(wi, sample(cam_j, o[d]));
+      }
+    }
+
+    float c0 = c[0];
+
+    for (int k = 1; k < 16; ++k) {
+      if (c0 < c[k])
+        return 0.0f;
     }
 
     return c0;
@@ -151,11 +143,17 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   float voxel_h = (float)model.virtual_box.extent().x() / model.width;
   float param_lambda = 0.5f; // TODO: 0.5f
 
+  // vhull map
+  std::vector<bool> foreground(model.morton_length, false);
+
   // Setup Graph - Visual Hull
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
     float weight = param_lambda * voxel_h * voxel_h * voxel_h;
     printf("Wb = %f\n", weight);
+
+    for (uint64_t m : voxels)
+      foreground[m] = true;
 
     uint64_t s = 0, n = voxels.size();
     for (uint64_t i = 0; i < n; ++i) {
@@ -193,25 +191,25 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       vec3 minpos = (vec3)vbox.minpos;
       //printf("m=%lld\n", m);
       if (x > 0) {
-        // midpoint of [x,y,z] and [x-1,y,z]
-        //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x-1, y, z);
-        float w = weight * pc.compute(copy_x(center, minpos));
-        printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
-        graph.set_neighbor_cap(node,-1, 0, 0, w);
+        if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
+          float w = weight * pc.compute(copy_x(center, minpos));
+          printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
+          graph.set_neighbor_cap(node,-1, 0, 0, w);
+        }
       }
       if (y > 0) {
-        // midpoint of [x,y,z] and [x,y-1,z]
-        //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y-1, z);
-        float w = weight * pc.compute(copy_y(center, minpos));
-        printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
-        graph.set_neighbor_cap(node, 0,-1, 0, w);
+        if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
+          float w = weight * pc.compute(copy_y(center, minpos));
+          printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
+          graph.set_neighbor_cap(node, 0,-1, 0, w);
+        }
       }
       if (z > 0) {
-        // midpoint of [x,y,z] and [x,y,z-1]
-        //printf("m=%lld [%d %d %d] [%d %d %d]\n", m, x, y, z, x, y, z-1);
-        float w = weight * pc.compute(copy_z(center, minpos));
-        printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
-        graph.set_neighbor_cap(node, 0, 0,-1, w);
+        if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
+          float w = weight * pc.compute(copy_z(center, minpos));
+          printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
+          graph.set_neighbor_cap(node, 0, 0,-1, w);
+        }
       }
     }
   }
