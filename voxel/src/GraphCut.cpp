@@ -155,25 +155,15 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
     for (uint64_t m : voxels)
       foreground[m] = true;
 
-    uint64_t s = 0, n = voxels.size();
-    for (uint64_t i = 0; i < n; ++i) {
+    for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
       uint32_t x, y, z;
-      uint64_t m = voxels[i];
-      for (; s < m; ++s) {
-        morton_decode(s, x, y, z);
+      morton_decode(m, x, y, z);
+
+      if (foreground[m]) {
+        graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0f);
+      } else {
         graph.set_terminal_cap(graph.node_id(x, y, z), 0.0f, INFINITY);
       }
-
-      morton_decode(m, x, y, z);
-      graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0f);
-
-      s = m + 1;
-    }
-
-    for (; s < n; ++s) {
-      uint32_t x, y, z;
-      morton_decode(s, x, y, z);
-      graph.set_terminal_cap(graph.node_id(x, y, z), 0.0f, INFINITY);
     }
   }
 
