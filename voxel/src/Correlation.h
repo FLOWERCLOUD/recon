@@ -13,15 +13,19 @@ using vectormath::aos::vec4;
 using vectormath::aos::utils::point3;
 
 struct SampleWindow {
+  bool valid;
   uint8_t red[121];
   uint8_t green[121];
   uint8_t blue[121];
 
   SampleWindow(const QImage& image, vec3 xy)
+  : valid(false)
   {
     int width = image.width(), height = image.height();
     int px = (float)xy.x(), py = (float)xy.y();
     int px0 = px - 5, py0 = py - 5;
+
+    this->valid = image.valid(px, py);
 
     for (int i = 0; i < 11; ++i) {
       for (int j = 0; j < 11; ++j) {
@@ -52,7 +56,7 @@ struct NormalizedCrossCorrelation {
   float value;
 
   NormalizedCrossCorrelation(const SampleWindow& wi, const SampleWindow& wj)
-  : value(zncc(wi, wj))
+  : value((wi.valid && wj.valid) ? zncc(wi, wj) : -1.0f)
   {
   }
 
@@ -91,12 +95,8 @@ struct NormalizedCrossCorrelation {
     float u = (float)ncc.y();
     float v = (float)ncc.z();
 
-    if (isnan(y))
-      y = 1.0f;
-    if (isnan(u))
-      u = 1.0f;
-    if (isnan(v))
-      v = 1.0f;
+    if (isnan(y) || isnan(u) || isnan(v))
+      return -1.0f;
 
     return 0.5f * y + 0.25f * u + 0.25f * v;
   }

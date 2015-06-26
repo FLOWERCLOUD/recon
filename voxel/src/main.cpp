@@ -55,10 +55,10 @@ int main(int argc, char* argv[])
   //}
 
   recon::VoxelModel model(7, loader.model_boundingbox());
-  recon::VoxelList vlist = graph_cut(model, cameras);
-  recon::save_ply("voxels.ply", model, vlist);
-  //QImage img = recon::photo_consistency_test(model, cameras, 64);
-  //img.save("photo-consistency.png");
+  //recon::VoxelList vlist = graph_cut(model, cameras);
+  //recon::save_ply("voxels.ply", model, vlist);
+  QImage img = recon::ncc_image(model, cameras, 30, 35, 36);
+  img.save("photo-consistency.png");
 
   return 0;
 }

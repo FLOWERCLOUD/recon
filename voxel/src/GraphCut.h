@@ -35,6 +35,6 @@
 namespace recon {
 
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras);
-QImage photo_consistency_test(const VoxelModel& model, const QList<Camera>& cameras, int plane_y);
+QImage ncc_image(const VoxelModel& model, const QList<Camera>& cameras, int plane_y, int cam_i, int cam_j);
 
 }

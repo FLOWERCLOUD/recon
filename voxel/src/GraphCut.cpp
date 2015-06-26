@@ -95,40 +95,28 @@ struct PhotoConsistency {
 
   float vote(int cam_i, point3 pos)
   {
-    ray3 o = ray3::make(pos, cameras[cam_i].center());
+    point3 ci = cameras[cam_i].center();
+    ray3 o = ray3(pos, 0.5f * voxel_size * normalize(ci - pos));
     SampleWindow wi = sample(cam_i, pos);
 
-    float c[16];
-    for (int k = 0; k < 16; ++k) {
-      c[k] = 0.0f;
-      float d = (float)k / 16.0f;
-      for (int cam_j : closest_cameras(cam_i)) {
-        c[k] += NormalizedCrossCorrelation(wi, sample(cam_j, o[d]));
-      }
-      c[k] /= (float)closest_cameras(cam_i).size();
-    }
+    // TODO
+    /*int n_local_maxima = 0;
+    float s[];
+    for (int k = 0; k <= 32; ++k) {
+      (k - 16)
+    }*/
 
-    float c0 = c[0];
-
-    for (int k = 1; k < 16; ++k) {
-      if (c0 < c[k])
-        return 0.0f;
-    }
-
-    return c0;
+    return 0.0f;
   }
 
   float compute(vec3 pos)
   {
     const float param_mju = 0.05f;
 
-    //return 0.0000001f; // TODO: remove it
-
     float sum = 0.0f;
     for (int i = 0, n = cameras.size(); i < n; ++i) {
       sum += vote(i, (point3)pos);
     }
-    //printf("c(%f,%f,%f) = %f\n", (float)pos.x(), (float)pos.y(), (float)pos.z(), sum);
     return expf(-param_mju * sum);
   }
 
@@ -151,7 +139,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
     float weight = param_lambda * voxel_h * voxel_h * voxel_h;
-    printf("Wb = %f\n", weight);
+    //printf("Wb = %f\n", weight);
 
     for (uint64_t m : voxels)
       foreground[m] = true;
@@ -163,7 +151,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       if (foreground[m]) {
         graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0f);
       } else {
-        graph.set_terminal_cap(graph.node_id(x, y, z), 0.0f, INFINITY);
+        graph.set_terminal_cap(graph.node_id(x, y, z), weight, INFINITY);
       }
     }
   }
@@ -180,33 +168,32 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       AABox vbox = model.element_box(m);
       vec3 center = (vec3)vbox.center();
       vec3 minpos = (vec3)vbox.minpos;
-      //printf("m=%lld\n", m);
       if (x > 0) {
-        if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
-          float w = weight * pc.compute(copy_x(center, minpos));
-          //printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x-1, y, z, w);
-          graph.set_neighbor_cap(node,-1, 0, 0, w);
-        } else {
-          graph.set_neighbor_cap(node,-1, 0, 0, INFINITY);
-        }
+        float w = 0.00001f; // TODO
+        //if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
+        //  w = weight * pc.compute(copy_x(center, minpos));
+        //} else {
+        //  w = INFINITY;
+        //}
+        graph.set_neighbor_cap(node,-1, 0, 0, w);
       }
       if (y > 0) {
-        if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
-          float w = weight * pc.compute(copy_y(center, minpos));
-          //printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y-1, z, w);
-          graph.set_neighbor_cap(node, 0,-1, 0, w);
-        } else {
-          graph.set_neighbor_cap(node, 0,-1, 0, INFINITY);
-        }
+        float w = 0.00001f; // TODO
+        //if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
+        //  w = weight * pc.compute(copy_y(center, minpos));
+        //} else {
+        //  w = INFINITY;
+        //}
+        graph.set_neighbor_cap(node, 0,-1, 0, w);
       }
       if (z > 0) {
-        if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
-          float w = weight * pc.compute(copy_z(center, minpos));
-          //printf("W([%d,%d,%d] [%d,%d,%d]) = %f\n", x, y, z, x, y, z-1, w);
-          graph.set_neighbor_cap(node, 0, 0,-1, w);
-        } else {
-          graph.set_neighbor_cap(node, 0, 0,-1, INFINITY);
-        }
+        float w = 0.00001f; // TODO
+        //if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
+        //  w = weight * pc.compute(copy_z(center, minpos));
+        //} else {
+        //  w = INFINITY;
+        //}
+        graph.set_neighbor_cap(node, 0, 0,-1, w);
       }
     }
   }
@@ -239,47 +226,31 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   return result;
 }
 
-QImage photo_consistency_test(const VoxelModel& model, const QList<Camera>& cameras, int plane_y)
+QImage ncc_image(const VoxelModel& model,
+                 const QList<Camera>& cameras,
+                 int plane_y,
+                 int cam_i,
+                 int cam_j)
 {
   QImage canvas = QImage(model.width, model.depth, QImage::Format_ARGB32);
-  canvas.fill(qRgba(0, 0, 0, 0));
-
-  QList<uint64_t> foreground_voxels = visual_hull(model, cameras);
-  for (uint64_t m : foreground_voxels) {
-    uint32_t x, y, z;
-    morton_decode(m, x, y, z);
-    if (y == (uint32_t)plane_y) {
-      canvas.setPixel(x, z, qRgb(0, 0, 0));
-    }
-  }
-
-  int cam_i = 0;
-  //int cam_j = 13;
-  //for (int cam_j : pc.closest_cameras(cam_i))
   PhotoConsistency pc(model, cameras);
 
   for (int i = 0; i < canvas.height(); ++i) {
     for (int j = 0; j < canvas.width(); ++j) {
       uint64_t morton = morton_encode(j, plane_y, i);
       point3 pos = model.element_box(morton).center();
-      //ray3 o = ray3::make(pos, cameras[cam_i].center()); // length(diff) = 1
+      SampleWindow wi = pc.sample(cam_i, pos);
+      SampleWindow wj = pc.sample(cam_j, pos);
 
-      //SampleWindow wi = pc.sample(cam_i, pos);
-      //SampleWindow wj = pc.sample(cam_j, o[0.0f]);
-      //float ncc = NormalizedCrossCorrelation(wi, wj);
-      //ncc = fmaxf(ncc * 0.5f + 0.5f);
-
-      //float ncc = pc.vote(cam_i, pos);
-      float ncc = pc.compute((vec3)pos);
-      printf("%d %d\n", i, j);
+      float ncc = NormalizedCrossCorrelation(wi, wj);
+      ncc = fmaxf(ncc * 0.5f + 0.5f, 0.0f);
 
       int pix = (int)(fmaxf(ncc, 0.0f) * 255) & 0xFF;
-      int alpha = qAlpha(canvas.pixel(j,i));
-      canvas.setPixel(j,i,qRgba(pix, pix, pix, (alpha ? alpha : 128)));
+      canvas.setPixel(j,i,qRgb(pix, pix, pix));
     }
   }
 
-  return canvas;
+  return canvas.mirrored();
 }
 
 }
