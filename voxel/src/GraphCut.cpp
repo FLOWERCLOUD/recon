@@ -231,10 +231,10 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   return result;
 }
 
-QList<QPointF> depth_curve(const VoxelModel& model,
-                           const QList<Camera>& cameras,
-                           int voxel_x, int voxel_y, int voxel_z,
-                           int cam_i, int cam_j)
+QList<QPointF> ncc_curve(const VoxelModel& model,
+                         const QList<Camera>& cameras,
+                         int voxel_x, int voxel_y, int voxel_z,
+                         int cam_i, int cam_j)
 {
   QList<QPointF> data;
   PhotoConsistency pc(model, cameras);
@@ -242,7 +242,7 @@ QList<QPointF> depth_curve(const VoxelModel& model,
   uint64_t morton = morton_encode(voxel_x, voxel_y, voxel_z);
   point3 vpos = model.element_box(morton).center();
   point3 ci = cameras[cam_i].center();
-  ray3 o = ray3(vpos, normalize(ci - vpos) /* pc.voxel_size * 0.5f */);
+  ray3 o = ray3(vpos, normalize(ci - vpos) * pc.voxel_size * 0.5f);
 
   SampleWindow wi = pc.sample(cam_i, vpos);
 

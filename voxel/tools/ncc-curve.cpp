@@ -1,6 +1,5 @@
-#include "CameraLoader.h"
-#include "GraphCut.h"
-
+#include <recon/CameraLoader.h>
+#include <recon/GraphCut.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
@@ -17,10 +16,27 @@ int main(int argc, char* argv[])
   QCoreApplication::setApplicationVersion("1.0");
 
   QCommandLineParser parser;
-  parser.setApplicationDescription("Model Generator");
+  parser.setApplicationDescription("Visualize NCC values");
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
+
+  QCommandLineOption optVoxelX("voxel_x", "Voxel X");
+  QCommandLineOption optVoxelY("voxel_y", "Voxel Y");
+  QCommandLineOption optVoxelZ("voxel_z", "Voxel Z");
+  QCommandLineOption optCamI("cam_i", "Camera i");
+  QCommandLineOption optCamJ("cam_j", "Camera j");
+  //QCommandLineOption optGnuplot("gnuplot", "Show GNUPlot Window");
+  optVoxelX.setDefaultValue("55");
+  optVoxelY.setDefaultValue("30");
+  optVoxelZ.setDefaultValue("58");
+  optCamI.setDefaultValue("34");
+  optCamJ.setDefaultValue("36");
+  parser.addOption(optVoxelX);
+  parser.addOption(optVoxelY);
+  parser.addOption(optVoxelZ);
+  parser.addOption(optCamI);
+  parser.addOption(optCamJ);
 
   parser.process(app);
 
@@ -55,46 +71,19 @@ int main(int argc, char* argv[])
   //}
 
   recon::VoxelModel model(7, loader.model_boundingbox());
-  //recon::VoxelList vlist = graph_cut(model, cameras);
-  //recon::save_ply("voxels.ply", model, vlist);
 
-  //QImage img = recon::ncc_image(model, cameras, 30, 35, 36);
-  //img.save("ncc-35-36.png");
-
-#if true
-  QList<QPointF> data;
-  int vx = 55, vy = 30, vz = 58;
-  int cam_i = 34, cam_j = 36;
-  //
-  //
-  data = depth_curve(model, cameras, vx, vy, vz, cam_i, cam_j);
+  //int vx = 55, vy = 30, vz = 58;
+  //int cam_i = 34, cam_j = 36;
+  int vx = parser.value(optVoxelX).toInt();
+  int vy = parser.value(optVoxelY).toInt();
+  int vz = parser.value(optVoxelZ).toInt();
+  int cam_i = parser.value(optCamI).toInt();
+  int cam_j = parser.value(optCamJ).toInt();
+  QList<QPointF> data = ncc_curve(model, cameras, vx, vy, vz, cam_i, cam_j);
   printf("# X Y\n");
   for (QPointF p : data){
     printf("%.10g %.10g\n", p.x(), p.y());
   }
-#endif
-
-#if 0
-  recon::point3 model_center = model.real_box.center();
-  for (int i = 0; i < cameras.size(); ++i) {
-    for (int j = i+1; j < cameras.size(); ++j) {
-      float dp = (float)dot(normalize(cameras[i].center()-model_center), normalize(cameras[j].center()-model_center));
-      if (dp >= 0.95f) {
-        printf("ncc for %d & %d\n", i, j);
-        QImage img = recon::ncc_image(model, cameras, 30, i, j);
-        img.save(QString("ncc-%1-%2-%3.png").arg(i).arg(j).arg(dp));
-      }
-    }
-  }
-#endif
-
-#if 0
-  for (int i = 0; i < cameras.size(); ++i) {
-    printf("process vote-%d\n", i);
-    QImage img = recon::vote_image(model, cameras, 30, i);
-    img.save(QString("vote-%1.png").arg(i));
-  }
-#endif
 
   return 0;
 }
