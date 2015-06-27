@@ -81,9 +81,50 @@ int main(int argc, char* argv[])
   int vz = parser.value(optVoxelZ).toInt();
   int cam_i = parser.value(optCamI).toInt();
   int cam_j = parser.value(optCamJ).toInt();
+
   QList<QPointF> data = ncc_curve(model, cameras, vx, vy, vz, cam_i, cam_j);
+  QList<QPointF> d_data, d2_data;
+
+  // Derivative
+  for (int i = 0, n = data.size(); i < n; ++i) {
+    int i1 = (i > 0 ? i-1 : 0);
+    int i2 = (i < n-1 ? i+1 : i);
+    float y = (data[i2].y() - data[i1].y()) / (data[i2].x() - data[i1].x());
+    float x = data[i].x();
+    d_data.append(QPointF(x, y));
+  }
+
+  // 2nd-order derivative
+  for (int i = 0, n = data.size(); i < n; ++i) {
+    int i1 = (i > 0 ? i-1 : 0);
+    int i2 = (i < n-1 ? i+1 : i);
+
+    float dx2 = data[i2].x() - data[i].x();
+    float dx1 = data[i].x() - data[i1].x();
+    float dx = data[i2].x() - data[i1].x();
+
+    float y = dx1 * data[i2].y() - dx * data[i].y() + dx2 * data[i1].y();
+    y /= 0.5f * dx2 * dx1 * dx;
+
+    float x = data[i].x();
+    d2_data.append(QPointF(x, y));
+  }
+
+  printf("# NCC Data (index 0)");
   printf("# X Y\n");
   for (QPointF p : data){
+    printf("%.10g %.10g\n", p.x(), p.y());
+  }
+  printf("\n\n");
+
+  printf("# 1st-order Derivative of NCC (index 1)\n");
+  for (QPointF p : d_data){
+    printf("%.10g %.10g\n", p.x(), p.y());
+  }
+  printf("\n\n");
+
+  printf("# 2nd-order Derivative of NCC (index 2)\n");
+  for (QPointF p : d2_data){
     printf("%.10g %.10g\n", p.x(), p.y());
   }
 
