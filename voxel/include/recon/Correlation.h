@@ -14,35 +14,61 @@ using vectormath::aos::utils::point3;
 
 struct SampleWindow {
   bool valid;
-  uint8_t red[121];
-  uint8_t green[121];
-  uint8_t blue[121];
+  float red[121];
+  float green[121];
+  float blue[121];
 
-  SampleWindow(const QImage& image, vec3 xy)
+  SampleWindow()
   : valid(false)
   {
+  }
+
+  SampleWindow(const QImage& image, vec3 xy)
+  : SampleWindow()
+  {
     int width = image.width(), height = image.height();
-    int px = (float)xy.x(), py = (float)xy.y();
-    int px0 = px - 5, py0 = py - 5;
 
-    this->valid = image.valid(px, py);
+    float ix, iy;
+    float fx = modff((float)xy.x(), &ix);
+    float fy = modff((float)xy.y(), &iy);
 
-    for (int i = 0; i < 11; ++i) {
-      for (int j = 0; j < 11; ++j) {
-        int x = px0 + j, y = py0 + i;
-        x = (x < 0 ? 0 : x);
-        x = (x < width ? x : width-1);
-        y = (y < 0 ? 0 : y);
-        y = (y < height ? y : height-1);
+    int px = (int)ix, py = (int)iy;
+    if (px >= 0 && py >= 0 && px < width && py < height) {
+      uint8_t r[12][12];
+      uint8_t g[12][12];
+      uint8_t b[12][12];
 
-        QRgb c = image.pixel(x, y);
-
-        int index = (i) * 11 + (j);
-        this->red[ index ] = qRed(c);
-        this->green[ index ] = qGreen(c);
-        this->blue[ index ] = qBlue(c);
+      for (int i = 0; i < 12; ++i) {
+        for (int j = 0; j < 12; ++j) {
+          int x = px - 5 + j, y = py - 5 + i;
+          x = (x < 0 ? 0 : x);
+          x = (x < width ? x : width-1);
+          y = (y < 0 ? 0 : y);
+          y = (y < height ? y : height-1);
+          QRgb c = image.pixel(x, y);
+          r[i][j] = qRed(c);
+          g[i][j] = qGreen(c);
+          b[i][j] = qBlue(c);
+        }
       }
+
+      for (int i = 0; i < 11; ++i) {
+        for (int j = 0; j < 11; ++j) {
+          int index = i*11+j;
+          red[index] = bilinear(fx, fy, r[i][j], r[i][j+1], r[i+1][j], r[i+1][j+1]);
+          green[index] = bilinear(fx, fy, g[i][j], g[i][j+1], g[i+1][j], g[i+1][j+1]);
+          blue[index] = bilinear(fx, fy, b[i][j], b[i][j+1], b[i+1][j], b[i+1][j+1]);
+        }
+      }
+      valid = true;
     }
+  }
+
+  static inline float bilinear(float fx, float fy, float v00, float v10, float v01, float v11)
+  {
+    float v_0 = (1.0f - fx) * v00 + fx * v10;
+    float v_1 = (1.0f - fx) * v01 + fx * v11;
+    return (1.0f - fy) * v_0 + fy * v_1;
   }
 };
 

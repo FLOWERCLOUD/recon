@@ -12,7 +12,7 @@
 int main(int argc, char* argv[])
 {
   QCoreApplication app(argc, argv);
-  QCoreApplication::setApplicationName("voxel");
+  QCoreApplication::setApplicationName("ncc-curve");
   QCoreApplication::setApplicationVersion("1.0");
 
   QCommandLineParser parser;
@@ -21,11 +21,11 @@ int main(int argc, char* argv[])
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
 
-  QCommandLineOption optVoxelX("voxel_x", "Voxel X");
-  QCommandLineOption optVoxelY("voxel_y", "Voxel Y");
-  QCommandLineOption optVoxelZ("voxel_z", "Voxel Z");
-  QCommandLineOption optCamI("cam_i", "Camera i");
-  QCommandLineOption optCamJ("cam_j", "Camera j");
+  QCommandLineOption optVoxelX(QStringList() << "vx" << "voxel-x", "Voxel X", "voxel_x");
+  QCommandLineOption optVoxelY(QStringList() << "vy" << "voxel-y", "Voxel Y", "voxel_y");
+  QCommandLineOption optVoxelZ(QStringList() << "vz" << "voxel-z", "Voxel Z", "voxel_z");
+  QCommandLineOption optCamI(QStringList() << "ci" << "cam-i", "Camera i", "cam_i");
+  QCommandLineOption optCamJ(QStringList() << "cj" << "cam-j", "Camera j", "cam_j");
   //QCommandLineOption optGnuplot("gnuplot", "Show GNUPlot Window");
   optVoxelX.setDefaultValue("55");
   optVoxelY.setDefaultValue("30");

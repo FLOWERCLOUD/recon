@@ -242,13 +242,13 @@ QList<QPointF> ncc_curve(const VoxelModel& model,
   uint64_t morton = morton_encode(voxel_x, voxel_y, voxel_z);
   point3 vpos = model.element_box(morton).center();
   point3 ci = cameras[cam_i].center();
-  ray3 o = ray3(vpos, normalize(ci - vpos) * pc.voxel_size * 0.5f);
+  ray3 o = ray3(vpos, normalize(ci - vpos) /* pc.voxel_size * 2.0f */);
 
   SampleWindow wi = pc.sample(cam_i, vpos);
 
-  data.reserve(33);
-  for (int k = -16; k <= 16; ++k) {
-    float d = (float) k / 16.0f;
+  data.reserve(129);
+  for (int k = -64; k <= 64; ++k) {
+    float d = (float) k / 64.0f;
     SampleWindow wj = pc.sample(cam_j, o[d]);
     float ncc = NormalizedCrossCorrelation(wi, wj);
     data.append(QPointF(d, ncc));
