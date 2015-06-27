@@ -99,6 +99,7 @@ struct NormalizedCrossCorrelation {
       return -1.0f;
 
     return 0.5f * y + 0.25f * u + 0.25f * v;
+    //return y;
   }
 
   inline operator float() const

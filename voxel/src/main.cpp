@@ -62,13 +62,28 @@ int main(int argc, char* argv[])
   //img.save("ncc-35-36.png");
 
 #if true
-  point3 model_center = model.real_box.center();
+  QList<QPointF> data;
+  int vx = 55, vy = 30, vz = 58;
+  int cam_i = 34, cam_j = 36;
+  //
+  //
+  data = depth_curve(model, cameras, vx, vy, vz, cam_i, cam_j);
+  printf("# X Y\n");
+  for (QPointF p : data){
+    printf("%.10g %.10g\n", p.x(), p.y());
+  }
+#endif
+
+#if 0
+  recon::point3 model_center = model.real_box.center();
   for (int i = 0; i < cameras.size(); ++i) {
     for (int j = i+1; j < cameras.size(); ++j) {
-
-      printf("ncc for %d & %d\n", i, j);
-      QImage img = recon::ncc_image(model, cameras, 30, i, j);
-      img.save(QString("ncc-%1-%2.png").arg(i).arg(j));
+      float dp = (float)dot(normalize(cameras[i].center()-model_center), normalize(cameras[j].center()-model_center));
+      if (dp >= 0.95f) {
+        printf("ncc for %d & %d\n", i, j);
+        QImage img = recon::ncc_image(model, cameras, 30, i, j);
+        img.save(QString("ncc-%1-%2-%3.png").arg(i).arg(j).arg(dp));
+      }
     }
   }
 #endif
