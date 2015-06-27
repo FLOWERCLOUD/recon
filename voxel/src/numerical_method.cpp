@@ -41,4 +41,12 @@ QList<QPointF> second_order(const QList<QPointF>& data)
   return d2_data;
 }
 
+QList<float> find_roots(const QList<QPointF>& data)
+{
+}
+
+QList<float> local_maxima(const QList<QPointF>& data)
+{
+}
+
 }
