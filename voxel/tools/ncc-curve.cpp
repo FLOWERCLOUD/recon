@@ -1,5 +1,6 @@
 #include <recon/CameraLoader.h>
 #include <recon/GraphCut.h>
+#include <recon/numerical_method.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
@@ -83,32 +84,12 @@ int main(int argc, char* argv[])
   int cam_j = parser.value(optCamJ).toInt();
 
   QList<QPointF> data = ncc_curve(model, cameras, vx, vy, vz, cam_i, cam_j);
-  QList<QPointF> d_data, d2_data;
 
   // Derivative
-  for (int i = 0, n = data.size(); i < n; ++i) {
-    int i1 = (i > 0 ? i-1 : 0);
-    int i2 = (i < n-1 ? i+1 : i);
-    float y = (data[i2].y() - data[i1].y()) / (data[i2].x() - data[i1].x());
-    float x = data[i].x();
-    d_data.append(QPointF(x, y));
-  }
+  QList<QPointF> d_data = recon::first_order(data);
 
   // 2nd-order derivative
-  for (int i = 0, n = data.size(); i < n; ++i) {
-    int i1 = (i > 0 ? i-1 : 0);
-    int i2 = (i < n-1 ? i+1 : i);
-
-    float dx2 = data[i2].x() - data[i].x();
-    float dx1 = data[i].x() - data[i1].x();
-    float dx = data[i2].x() - data[i1].x();
-
-    float y = dx1 * data[i2].y() - dx * data[i].y() + dx2 * data[i1].y();
-    y /= 0.5f * dx2 * dx1 * dx;
-
-    float x = data[i].x();
-    d2_data.append(QPointF(x, y));
-  }
+  QList<QPointF> d2_data = recon::second_order(data);
 
   printf("# NCC Data (index 0)");
   printf("# X Y\n");
