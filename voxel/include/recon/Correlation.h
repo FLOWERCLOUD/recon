@@ -26,6 +26,45 @@ struct SampleWindow {
   SampleWindow(const QImage& image, vec3 xy)
   : SampleWindow()
   {
+    set_bilinear(image, xy);
+    //set_floor(image, xy);
+  }
+
+  inline void set_floor(const QImage& image, vec3 xy)
+  {
+    int width = image.width(), height = image.height();
+    int px = (float)xy.x(), py = (float)xy.y();
+    int px0 = px - 5, py0 = py - 5;
+
+    this->valid = image.valid(px, py);
+
+    for (int i = 0; i < 11; ++i) {
+      for (int j = 0; j < 11; ++j) {
+        int x = px0 + j, y = py0 + i;
+        x = (x < 0 ? 0 : x);
+        x = (x < width ? x : width-1);
+        y = (y < 0 ? 0 : y);
+        y = (y < height ? y : height-1);
+
+        QRgb c = image.pixel(x, y);
+
+        int index = (i) * 11 + (j);
+        red[ index ] = qRed(c);
+        green[ index ] = qGreen(c);
+        blue[ index ] = qBlue(c);
+      }
+    }
+  }
+
+  static inline float bilinear(float fx, float fy, float v00, float v10, float v01, float v11)
+  {
+    float v_0 = (1.0f - fx) * v00 + fx * v10;
+    float v_1 = (1.0f - fx) * v01 + fx * v11;
+    return (1.0f - fy) * v_0 + fy * v_1;
+  }
+
+  inline void set_bilinear(const QImage& image, vec3 xy)
+  {
     int width = image.width(), height = image.height();
 
     float ix, iy;
@@ -62,13 +101,6 @@ struct SampleWindow {
       }
       valid = true;
     }
-  }
-
-  static inline float bilinear(float fx, float fy, float v00, float v10, float v01, float v11)
-  {
-    float v_0 = (1.0f - fx) * v00 + fx * v10;
-    float v_1 = (1.0f - fx) * v01 + fx * v11;
-    return (1.0f - fy) * v_0 + fy * v_1;
   }
 };
 

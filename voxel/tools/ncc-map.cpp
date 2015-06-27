@@ -21,20 +21,14 @@ int main(int argc, char* argv[])
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
 
-  QCommandLineOption optVoxelX(QStringList() << "vx" << "voxel-x", "Voxel X", "voxel_x");
-  QCommandLineOption optVoxelY(QStringList() << "vy" << "voxel-y", "Voxel Y", "voxel_y");
-  QCommandLineOption optVoxelZ(QStringList() << "vz" << "voxel-z", "Voxel Z", "voxel_z");
+  QCommandLineOption optPlaneY(QStringList() << "py" << "plane-y", "Plane Y", "plane_y");
   QCommandLineOption optCamI(QStringList() << "ci" << "cam-i", "Camera i", "cam_i");
   QCommandLineOption optCamJ(QStringList() << "cj" << "cam-j", "Camera j", "cam_j");
   //QCommandLineOption optGnuplot("gnuplot", "Show GNUPlot Window");
-  optVoxelX.setDefaultValue("55");
-  optVoxelY.setDefaultValue("30");
-  optVoxelZ.setDefaultValue("58");
+  optPlaneY.setDefaultValue("30");
   optCamI.setDefaultValue("34");
   optCamJ.setDefaultValue("36");
-  parser.addOption(optVoxelX);
-  parser.addOption(optVoxelY);
-  parser.addOption(optVoxelZ);
+  parser.addOption(optPlaneY);
   parser.addOption(optCamI);
   parser.addOption(optCamJ);
 
@@ -72,20 +66,12 @@ int main(int argc, char* argv[])
 
   recon::VoxelModel model(7, loader.model_boundingbox());
 
-  // --vx 55 --vy 30 --vz 58 --ci 34 --cj 36
-
-  //int vx = 55, vy = 30, vz = 58;
-  //int cam_i = 34, cam_j = 36;
-  int vx = parser.value(optVoxelX).toInt();
-  int vy = parser.value(optVoxelY).toInt();
-  int vz = parser.value(optVoxelZ).toInt();
+  int plane_y = parser.value(optPlaneY).toInt();
   int cam_i = parser.value(optCamI).toInt();
   int cam_j = parser.value(optCamJ).toInt();
-  QList<QPointF> data = ncc_curve(model, cameras, vx, vy, vz, cam_i, cam_j);
-  printf("# X Y\n");
-  for (QPointF p : data){
-    printf("%.10g %.10g\n", p.x(), p.y());
-  }
+
+  QImage img = recon::ncc_image(model, cameras, plane_y, cam_i, cam_j);
+  img.save(QString("ncc-%1-%2.png").arg(cam_i).arg(cam_j));
 
   return 0;
 }
