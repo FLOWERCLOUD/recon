@@ -8,3 +8,6 @@ target_link_libraries(ncc-curve recon-voxel)
 
 add_executable(ncc-map ncc-map.cpp)
 target_link_libraries(ncc-map recon-voxel)
+
+add_executable(dump-data dump-data.cpp)
+target_link_libraries(dump-data recon-voxel)

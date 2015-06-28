@@ -1,4 +1,6 @@
 #include "numerical_method.h"
+#include "3rdparty/spline.h"
+#include <math.h>
 
 namespace recon {
 
@@ -41,11 +43,22 @@ QList<QPointF> second_order(const QList<QPointF>& data)
   return d2_data;
 }
 
-QList<float> find_roots(const QList<QPointF>& data)
+template<typename F, typename Fd>
+static double newton_raphson(double x0, const F& f, const Fd& fd)
 {
+  const int MAXITER = 20;
+  const double error = 0.00000001;
+
+  double x = x0, fx = f(x0);
+  for (int n = 0; n < MAXITER && fabs(fx) > error; ++n) {
+    x = x - fx / fd(x);
+    fx = f(x);
+  }
+
+  return x;
 }
 
-QList<float> local_maxima(const QList<QPointF>& data)
+QList<double> local_maxima(const QList<QPointF>& data)
 {
 }
 
