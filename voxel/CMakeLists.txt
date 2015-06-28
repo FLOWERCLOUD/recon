@@ -4,7 +4,6 @@ file(GLOB headers src/*.h)
 file(GLOB sources src/*.cpp)
 
 add_library(recon-voxel ${sources} ${headers})
-add_subdirectory(gridcut)
 add_subdirectory(trimesh2)
 target_link_libraries(recon-voxel
   PUBLIC
@@ -12,7 +11,6 @@ target_link_libraries(recon-voxel
   Qt5::Core
   Qt5::Gui
   PRIVATE
-  gridcut
   trimesh2
 )
 target_compile_options(recon-voxel
@@ -24,6 +22,7 @@ target_include_directories(recon-voxel
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include/recon
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty
 )
 
 add_subdirectory(tools)
