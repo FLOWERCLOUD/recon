@@ -17,9 +17,9 @@ VoxelList visual_hull(const VoxelModel& model, const QList<Camera>& cameras)
     Camera cam = cameras[cam_i];
     QImage mask = QImage(cam.maskPath());
 
-    mat4 extrinsic = cam.extrinsic();
-    mat4 intrinsic = cam.intrinsicForImage(mask.width(), mask.height());
-    mat4 transform = intrinsic * extrinsic;
+    Mat4 extrinsic = cam.extrinsic();
+    Mat4 intrinsic = cam.intrinsicForImage(mask.width(), mask.height());
+    Mat4 transform = intrinsic * extrinsic;
 
     QList<uint64_t>& old_voxels = voxels[current_voxel_list];
     QList<uint64_t>& new_voxels = voxels[(current_voxel_list + 1) % 2];
@@ -28,8 +28,8 @@ VoxelList visual_hull(const VoxelModel& model, const QList<Camera>& cameras)
 
     for (uint64_t morton : old_voxels) {
       AABox vbox = model.element_box(morton);
-      vec3 pos = (vec3)vbox.center();
-      pos = proj_vec3(transform * vec4(pos, 1.0f));
+      Vec3 pos = (Vec3)vbox.center();
+      pos = Vec3::proj(transform * Vec4(pos, 1.0f));
 
       QPoint pt2d = QPoint((float)pos.x(), (float)pos.y());
       if (mask.valid(pt2d)) {

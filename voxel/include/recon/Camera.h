@@ -8,12 +8,12 @@
 
 namespace recon {
 
-using vectormath::aos::vec3;
-using vectormath::aos::vec4;
-using vectormath::aos::quat;
-using vectormath::aos::mat3;
-using vectormath::aos::mat4;
-using vectormath::aos::utils::point3;
+using vectormath::aos::Vec3;
+using vectormath::aos::Vec4;
+using vectormath::aos::Quat;
+using vectormath::aos::Mat3;
+using vectormath::aos::Mat4;
+using vectormath::aos::utils::Point3;
 using vectormath::aos::utils::AABox;
 
 struct CameraData;
@@ -41,18 +41,18 @@ public:
   void setRadialDistortion(const RadialDistortion&);
   void setRadialDistortion(float, float);
 
-  point3 center() const;
-  void setCenter(point3);
+  Point3 center() const;
+  void setCenter(Point3);
 
-  mat3 rotation() const;
-  void setRotation(mat3);
-  void setRotation(quat);
+  Mat3 rotation() const;
+  void setRotation(Mat3);
+  void setRotation(Quat);
 
-  vec3 direction() const;
+  Vec3 direction() const;
 
-  mat4 extrinsic() const;
-  mat4 intrinsicForViewport() const;
-  mat4 intrinsicForImage(int width, int height) const;
+  Mat4 extrinsic() const;
+  Mat4 intrinsicForViewport() const;
+  Mat4 intrinsicForImage(int width, int height) const;
 
   QString imagePath() const;
   void setImagePath(const QString&);
@@ -63,7 +63,7 @@ public:
   QString maskPath() const;
   void setMaskPath(const QString&);
 
-  bool canSee(point3 pt) const;
+  bool canSee(Point3 pt) const;
 
 private:
   //QSharedDataPointer<CameraData> data;

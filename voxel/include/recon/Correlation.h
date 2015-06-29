@@ -8,9 +8,9 @@
 
 namespace recon {
 
-using vectormath::aos::vec3;
-using vectormath::aos::vec4;
-using vectormath::aos::utils::point3;
+using vectormath::aos::Vec3;
+using vectormath::aos::Vec4;
+using vectormath::aos::utils::Point3;
 
 struct SampleWindow {
   bool valid;
@@ -23,14 +23,14 @@ struct SampleWindow {
   {
   }
 
-  SampleWindow(const QImage& image, vec3 xy)
+  SampleWindow(const QImage& image, Vec3 xy)
   : SampleWindow()
   {
     set_bilinear(image, xy);
     //set_floor(image, xy);
   }
 
-  inline void set_floor(const QImage& image, vec3 xy)
+  inline void set_floor(const QImage& image, Vec3 xy)
   {
     int width = image.width(), height = image.height();
     int px = (float)xy.x(), py = (float)xy.y();
@@ -63,7 +63,7 @@ struct SampleWindow {
     return (1.0f - fy) * v_0 + fy * v_1;
   }
 
-  inline void set_bilinear(const QImage& image, vec3 xy)
+  inline void set_bilinear(const QImage& image, Vec3 xy)
   {
     int width = image.width(), height = image.height();
 
@@ -104,10 +104,10 @@ struct SampleWindow {
   }
 };
 
-static const mat3 RGB_TO_YUV = mat3{
-  vec3{ 0.299f, -0.147f, 0.615f },
-  vec3{ 0.587f, -0.289f, -0.515f },
-  vec3{ 0.114f, 0.436f, -0.100f }
+static const Mat3 RGB_TO_YUV = Mat3{
+  Vec3{ 0.299f, -0.147f, 0.615f },
+  Vec3{ 0.587f, -0.289f, -0.515f },
+  Vec3{ 0.114f, 0.436f, -0.100f }
 };
 
 struct NormalizedCrossCorrelation {
@@ -120,30 +120,30 @@ struct NormalizedCrossCorrelation {
 
   static float zncc(const SampleWindow& wi, const SampleWindow& wj)
   {
-    vec3 avg1 = vec3::zero(), avg2 = vec3::zero();
+    Vec3 avg1 = Vec3::zero(), avg2 = Vec3::zero();
     for (int i = 0; i < 121; ++i)
-      avg1 = avg1 + vec3(wi.red[i], wi.green[i], wi.blue[i]) / 121.0f;
+      avg1 = avg1 + Vec3(wi.red[i], wi.green[i], wi.blue[i]) / 121.0f;
     for (int i = 0; i < 121; ++i)
-      avg2 = avg2 + vec3(wj.red[i], wj.green[i], wj.blue[i]) / 121.0f;
+      avg2 = avg2 + Vec3(wj.red[i], wj.green[i], wj.blue[i]) / 121.0f;
 
-    vec3 s1 = vec3::zero(), s2 = vec3::zero();
+    Vec3 s1 = Vec3::zero(), s2 = Vec3::zero();
     for (int i = 0; i < 121; ++i) {
-      vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
+      Vec3 v1 = Vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
       v1 = RGB_TO_YUV * v1;
       s1 = s1 + square(v1);
     }
     for (int i = 0; i < 121; ++i) {
-      vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
+      Vec3 v2 = Vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
       v2 = RGB_TO_YUV * v2;
       s2 = s2 + square(v2);
     }
     s1 = rsqrt(s1);
     s2 = rsqrt(s2);
 
-    vec3 ncc = vec3::zero();
+    Vec3 ncc = Vec3::zero();
     for (int i = 0; i < 121; ++i) {
-      vec3 v1 = vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
-      vec3 v2 = vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
+      Vec3 v1 = Vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
+      Vec3 v2 = Vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
       v1 = RGB_TO_YUV * v1;
       v2 = RGB_TO_YUV * v2;
       ncc = ncc + mul(mul(v1, s1), mul(v2, s2));

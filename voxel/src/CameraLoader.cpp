@@ -96,8 +96,8 @@ bool CameraLoader::load_from_nvm(const QString& path)
       cam.setFocal(focal);
       cam.setAspect(aspect);
       cam.setRadialDistortion(distortion, 0.0f);
-      cam.setCenter(point3::load(center));
-      cam.setRotation(quat::load(orient));
+      cam.setCenter(Point3::load(center));
+      cam.setRotation(Quat::load(orient));
       cam.setImagePath(imagename);
       m_Cameras.append(cam);
     }
@@ -134,7 +134,7 @@ bool CameraLoader::load_from_nvm(const QString& path)
 
       bool visible = true;
       for (const Camera& cam : m_Cameras) {
-        visible = visible && cam.canSee(point3::load(pos));
+        visible = visible && cam.canSee(Point3::load(pos));
       }
       if (!visible)
         continue;
@@ -147,10 +147,10 @@ bool CameraLoader::load_from_nvm(const QString& path)
       m_Features.append(feat);
 
       if (bbox_first) {
-        m_ModelBox = AABox(point3::load(pos));
+        m_ModelBox = AABox(Point3::load(pos));
         bbox_first = false;
       } else {
-        m_ModelBox.add(point3::load(pos));
+        m_ModelBox.add(Point3::load(pos));
       }
     }
   }
@@ -186,8 +186,8 @@ void CameraLoader::debug_render_features(const QString& path, int camera_id) con
 
   QPainter painter(&canvas);
 
-  mat4 extrinsic = cam.extrinsic();
-  mat4 intrinsic = cam.intrinsicForImage(width, height);
+  Mat4 extrinsic = cam.extrinsic();
+  Mat4 intrinsic = cam.intrinsicForImage(width, height);
   /*{
     float m[16];
     transpose(intrinsic).store(m);
@@ -205,8 +205,8 @@ void CameraLoader::debug_render_features(const QString& path, int camera_id) con
   for (int i = 0; i < npoints; ++i) {
     const FeatureData& feat = m_Features[i];
 
-    vec3 worldpos = vec3::load(feat.pos);
-    vec3 pt = proj_vec3(intrinsic * (extrinsic * vec4(worldpos, 1.0f)));
+    Vec3 worldpos = Vec3::load(feat.pos);
+    Vec3 pt = Vec3::proj(intrinsic * (extrinsic * Vec4(worldpos, 1.0f)));
     //printf("(%f %f %f)\n", (float)pt.x(), (float)pt.y(), 1.0f / (float)pt.z());
 
     int penwidth = 10;

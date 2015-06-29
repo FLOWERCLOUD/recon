@@ -82,58 +82,58 @@ void Camera::setRadialDistortion(float k1, float k2)
   data->distortion[1] = k2;
 }
 
-point3 Camera::center() const
+Point3 Camera::center() const
 {
-  return point3::load(data->center);
+  return Point3::load(data->center);
 }
 
-void Camera::setCenter(point3 pos)
+void Camera::setCenter(Point3 pos)
 {
   pos.store(data->center);
 }
 
-mat3 Camera::rotation() const
+Mat3 Camera::rotation() const
 {
-  return mat3::load(data->rotation);
+  return Mat3::load(data->rotation);
 }
 
-void Camera::setRotation(mat3 rot)
+void Camera::setRotation(Mat3 rot)
 {
   rot.store(data->rotation);
 }
 
-void Camera::setRotation(quat rot)
+void Camera::setRotation(Quat rot)
 {
-  setRotation((mat3)rot);
+  setRotation((Mat3)rot);
 }
 
-vec3 Camera::direction() const
+Vec3 Camera::direction() const
 {
-  return rotation() * vec3(0.0f, 0.0f, 1.0f);
+  return rotation() * Vec3(0.0f, 0.0f, 1.0f);
 }
 
-mat4 Camera::extrinsic() const
+Mat4 Camera::extrinsic() const
 {
-  mat3 rot = rotation();
-  point3 pos = center();
-  vec3 trans = -transform(rot, pos);
-  return mat4(rot, trans);
+  Mat3 rot = rotation();
+  Point3 pos = center();
+  Vec3 trans = -transform(rot, pos);
+  return Mat4(rot, trans);
 }
 
-mat4 Camera::intrinsicForViewport() const
+Mat4 Camera::intrinsicForViewport() const
 {
   float f = data->focal;
   float a = data->aspect;
 
-  return mat4{ // column major
-    vec4{ (f/a*2.0f), 0.0f, 0.0f, 0.0f },
-    vec4{ 0.0f, (-f*2.0f), 0.0f, 0.0f },
-    vec4{ 0.0f, 0.0f, 0.0f, 1.0f },
-    vec4{ 0.0f, 0.0f, 1.0f, 0.0f }
+  return Mat4{ // column major
+    Vec4{ (f/a*2.0f), 0.0f, 0.0f, 0.0f },
+    Vec4{ 0.0f, (-f*2.0f), 0.0f, 0.0f },
+    Vec4{ 0.0f, 0.0f, 0.0f, 1.0f },
+    Vec4{ 0.0f, 0.0f, 1.0f, 0.0f }
   };
 }
 
-mat4 Camera::intrinsicForImage(int width, int height) const
+Mat4 Camera::intrinsicForImage(int width, int height) const
 {
   float f = data->focal;
   float a = data->aspect;
@@ -143,11 +143,11 @@ mat4 Camera::intrinsicForImage(int width, int height) const
   float dx = 0.5f * width;
   float dy = 0.5f * height;
 
-  return mat4{ // column major
-    vec4{ fx, 0.0f, 0.0f, 0.0f },
-    vec4{ 0.0f, fy, 0.0f, 0.0f },
-    vec4{ dx, dy, 0.0f, 1.0f },
-    vec4{ 0.0f, 0.0f, 1.0f, 0.0f }
+  return Mat4{ // column major
+    Vec4{ fx, 0.0f, 0.0f, 0.0f },
+    Vec4{ 0.0f, fy, 0.0f, 0.0f },
+    Vec4{ dx, dy, 0.0f, 1.0f },
+    Vec4{ 0.0f, 0.0f, 1.0f, 0.0f }
   };
 }
 
@@ -183,10 +183,10 @@ void Camera::setMaskPath(const QString& path)
   data->mask_path = path;
 }
 
-bool Camera::canSee(point3 pt) const
+bool Camera::canSee(Point3 pt) const
 {
-  mat4 tfm = intrinsicForViewport() * extrinsic();
-  vec3 pos = proj_vec3(transform(tfm, pt));
+  Mat4 tfm = intrinsicForViewport() * extrinsic();
+  Vec3 pos = Vec3::proj(transform(tfm, pt));
   //printf("pos.z = %f\n", (float)pos.z());
   return fabsf((float)pos.x()) <= 1.0f && fabsf((float)pos.y()) <= 1.0f;
   //return true;

@@ -65,14 +65,14 @@ int main(int argc, char* argv[])
     for (int i = 0, n = cameras.size(); i < n; ++i) {
       QJsonObject c;
       { // Center
-        recon::point3 pos = cameras[i].center();
+        recon::Point3 pos = cameras[i].center();
         QJsonArray jpos = { QJsonValue((float)pos.x()),
                             QJsonValue((float)pos.y()),
                             QJsonValue((float)pos.z()) };
         c.insert("center", jpos);
       }
       { // Rotation Matrix
-        recon::mat3 mat = cameras[i].rotation();
+        recon::Mat3 mat = cameras[i].rotation();
         QJsonArray jmat = {
           QJsonArray { QJsonValue((float)mat.column0().x()),
                        QJsonValue((float)mat.column1().x()),
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
         c.insert("rotation", jmat);
       }
       { // Extrinsic Matrix
-        recon::mat4 mat = cameras[i].extrinsic();
+        recon::Mat4 mat = cameras[i].extrinsic();
         QJsonArray jmat = {
           QJsonArray { QJsonValue((float)mat.column0().x()),
                        QJsonValue((float)mat.column1().x()),
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
       { // Intrinsic Matrix for Image
         QImageReader reader(cameras[i].imagePath());
         QSize dim = reader.size();
-        recon::mat4 mat = cameras[i].intrinsicForImage(dim.width(), dim.height());
+        recon::Mat4 mat = cameras[i].intrinsicForImage(dim.width(), dim.height());
         QJsonArray jmat = {
           QJsonArray { QJsonValue((float)mat.column0().x()),
                        QJsonValue((float)mat.column1().x()),

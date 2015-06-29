@@ -23,8 +23,8 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
     real_box.extent().store(siz);
     vsiz = fmaxf(siz[0], fmaxf(siz[1], siz[2]));
 
-    point3 start = real_box.minpos;
-    vec3 extent = vec3(vsiz, vsiz, vsiz);
+    Point3 start = real_box.minpos;
+    Vec3 extent = Vec3(vsiz, vsiz, vsiz);
     virtual_box = AABox(start, start + extent);
   }
 }
@@ -106,7 +106,7 @@ void save_ply(const QString& path, const VoxelModel& model, const QList<uint32_t
     if (qAlpha(color) == 0)
       continue;
 
-    point3 pos = model.element_box(m).center();
+    Point3 pos = model.element_box(m).center();
 
     trimesh::point pt = { (float)pos.x(), (float)pos.y(), (float)pos.z() };
     trimesh::Color c = { qRed(color), qGreen(color), qBlue(color) };

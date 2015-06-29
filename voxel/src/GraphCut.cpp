@@ -27,10 +27,10 @@
 
 namespace recon {
 
-using vectormath::aos::vec3;
-using vectormath::aos::vec4;
-using vectormath::aos::utils::point3;
-using vectormath::aos::utils::ray3;
+using vectormath::aos::Vec3;
+using vectormath::aos::Vec4;
+using vectormath::aos::utils::Point3;
+using vectormath::aos::utils::Ray3;
 
 static float gaussian(float x, float sigma = 1.0f)
 {
@@ -64,8 +64,8 @@ struct PhotoConsistency {
       for (int i = 0; i < n; ++i) {
         if (i == cam_i)
           continue;
-        vec3 v0 = cameras[cam_i].center() - model_box.center();
-        vec3 v1 = cameras[i].center() - model_box.center();
+        Vec3 v0 = cameras[cam_i].center() - model_box.center();
+        Vec3 v1 = cameras[i].center() - model_box.center();
         if ((float)dot(normalize(v0), normalize(v1)) >= float(M_RSQRT2)) {
           cams.append(i);
         }
@@ -84,22 +84,22 @@ struct PhotoConsistency {
     return images[cam_id];
   }
 
-  SampleWindow sample(int cam_i, point3 pos)
+  SampleWindow sample(int cam_i, Point3 pos)
   {
     Camera cam = cameras[cam_i];
     QImage img = image(cam_i);
-    mat4 txfm = cam.intrinsicForImage(img.width(), img.height());
+    Mat4 txfm = cam.intrinsicForImage(img.width(), img.height());
     txfm = txfm * cam.extrinsic();
-    return SampleWindow(img, proj_vec3(transform(txfm, pos)));
+    return SampleWindow(img, Vec3::proj(transform(txfm, pos)));
   }
 
   // TODO: epipolar_walk
   // TODO: depth from 2d
 
-  float vote_1(int cam_i, point3 pos)
+  float vote_1(int cam_i, Point3 pos)
   {
-    point3 ci = cameras[cam_i].center();
-    ray3 o = ray3(pos, 0.5f * voxel_size * normalize(ci - pos));
+    Point3 ci = cameras[cam_i].center();
+    Ray3 o = Ray3(pos, 0.5f * voxel_size * normalize(ci - pos));
     SampleWindow wi = sample(cam_i, pos);
 
     float c0 = -1.0f;
@@ -171,8 +171,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       morton_decode(m, x, y, z);
       int node = graph.node_id(x, y, z);
       AABox vbox = model.element_box(m);
-      vec3 center = (vec3)vbox.center();
-      vec3 minpos = (vec3)vbox.minpos;
+      Vec3 center = (Vec3)vbox.center();
+      Vec3 minpos = (Vec3)vbox.minpos;
       if (x > 0) {
         float w = 0.00001f; // TODO
         //if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
@@ -240,9 +240,9 @@ QList<QPointF> ncc_curve(const VoxelModel& model,
   PhotoConsistency pc(model, cameras);
 
   uint64_t morton = morton_encode(voxel_x, voxel_y, voxel_z);
-  point3 vpos = model.element_box(morton).center();
-  point3 ci = cameras[cam_i].center();
-  ray3 o = ray3(vpos, normalize(ci - vpos) * pc.voxel_size * 4.0f);
+  Point3 vpos = model.element_box(morton).center();
+  Point3 ci = cameras[cam_i].center();
+  Ray3 o = Ray3(vpos, normalize(ci - vpos) * pc.voxel_size * 4.0f);
 
   SampleWindow wi = pc.sample(cam_i, vpos);
 
@@ -267,7 +267,7 @@ QImage ncc_image(const VoxelModel& model,
   for (int i = 0; i < canvas.height(); ++i) {
     for (int j = 0; j < canvas.width(); ++j) {
       uint64_t morton = morton_encode(j, plane_y, i);
-      point3 pos = model.element_box(morton).center();
+      Point3 pos = model.element_box(morton).center();
       SampleWindow wi = pc.sample(cam_i, pos);
       SampleWindow wj = pc.sample(cam_j, pos);
 
@@ -297,7 +297,7 @@ QImage vote_image(const VoxelModel& model,
   for (int i = 0; i < canvas.height(); ++i) {
     for (int j = 0; j < canvas.width(); ++j) {
       uint64_t morton = morton_encode(j, plane_y, i);
-      point3 pos = model.element_box(morton).center();
+      Point3 pos = model.element_box(morton).center();
 
       float v = pc.vote_1(cam_i, pos);
 
