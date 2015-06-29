@@ -5,6 +5,9 @@
 # Ignore data files
 /data
 
+# Ignore python generated files
+*.pyc
+
 # Ignore system-generated files
 .DS_Store
 *.swp
