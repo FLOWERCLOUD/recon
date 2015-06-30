@@ -221,8 +221,8 @@ class VoxelVisualizer:
         plt.plot(xdata, ydata, '.')
         #
         total = np.nansum(np.array(filter(lambda x: x is not None, ydata)), dtype=np.float)
-        rho = np.exp(np.multiply(-0.05, total))
-        print("total = %f" % total, "rho = %f" % rho)
+        rho = np.exp(np.multiply(-0.05 * 255.0, total))
+        print("total = %f" % total, "rho = %f" % rho, "Wij = %f" % (rho * 4.0 / 3.0 * np.pi * self.voxel_size ** 2))
 
 def mainfunc():
     global ARGS
@@ -251,11 +251,11 @@ def mainfunc():
 
     visualizer = VoxelVisualizer(cameras, model, ARGS.voxel_x, ARGS.voxel_y, ARGS.voxel_z)
     print("voxel_size = %f" % visualizer.voxel_size)
+    print("Wb = %f" % (0.5 * visualizer.voxel_size ** 3))
     #visualizer.visualize_ncc_curve(ARGS.cam_i, ARGS.cam_j)
     #visualizer.visualize_score(ARGS.cam_i)
     #visualizer.visualize_votes1()
     visualizer.visualize_votes2()
-
 
     for cam_j in visualizer.find_closest_cameras(ARGS.cam_i, visualizer.voxel_pos):
         visualizer.visualize_ncc_curve(ARGS.cam_i, cam_j)

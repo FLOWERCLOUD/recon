@@ -43,37 +43,32 @@ struct PhotoConsistency {
   AABox model_box;
   float voxel_size;
   QList<Camera> cameras;
-  std::vector<QList<int>> closest_camera_lists;
+  //std::vector<QList<int>> closest_camera_lists;
   std::vector<QImage> images;
 
   PhotoConsistency(const VoxelModel& model, const QList<Camera>& cams)
   : model_box(model.real_box)
   , voxel_size((float)model.virtual_box.extent().x() / model.width)
   , cameras(cams)
-  , closest_camera_lists(cams.size())
+  //, closest_camera_lists(cams.size())
   , images(cams.size())
   {
   }
 
-  QList<int> closest_cameras(int cam_i)
+  QList<int> closest_cameras(int cam_i, Point3 x)
   {
-    if (closest_camera_lists[cam_i].isEmpty()) {
-      QList<int> cams;
-
-      int n = cameras.size();
-      for (int i = 0; i < n; ++i) {
-        if (i == cam_i)
-          continue;
-        Vec3 v0 = cameras[cam_i].center() - model_box.center();
-        Vec3 v1 = cameras[i].center() - model_box.center();
-        if ((float)dot(normalize(v0), normalize(v1)) >= float(M_RSQRT2)) {
-          cams.append(i);
-        }
+    QList<int> jcams;
+    Camera ci = cameras[cam_i];
+    Vec3 ni = normalize(ci.center() - x);
+    for (int j = 0, n = cameras.size(); j < n; ++j) {
+      Camera cj = cameras[j];
+      Vec3 nj = normalize(cj.center() - x);
+      float dp = (float)dot(ni, nj);
+      if (dp <= 0.984807753012208f && dp >= 0.9396926207859084f) {
+        jcams.append(j);
       }
-
-      closest_camera_lists[cam_i] = cams;
     }
-    return closest_camera_lists[cam_i];
+    return jcams;
   }
 
   QImage image(int cam_id)
@@ -93,37 +88,53 @@ struct PhotoConsistency {
     return SampleWindow(img, Vec3::proj(transform(txfm, pos)));
   }
 
-  // TODO: epipolar_walk
-  // TODO: depth from 2d
+  struct VoxelScore {
+    // TODO: ncc
+    // TODO: score
+    // TODO: operator()
+  };
 
-  float vote_1(int cam_i, Point3 pos)
+  float vote(int cam_i, Point3 pos)
   {
-    Point3 ci = cameras[cam_i].center();
-    Ray3 o = Ray3(pos, 0.5f * voxel_size * normalize(ci - pos));
-    SampleWindow wi = sample(cam_i, pos);
+    static const float drange[] = {
+      -5.0f,-4.9f,-4.8f,-4.7f,-4.6f,-4.5f,-4.4f,-4.3f,-4.2f,-4.1f,
+      -4.0f,-3.9f,-3.8f,-3.7f,-3.6f,-3.5f,-3.4f,-3.3f,-3.2f,-3.1f,
+      -3.0f,-2.9f,-2.8f,-2.7f,-2.6f,-2.5f,-2.4f,-2.3f,-2.2f,-2.1f,
+      -2.0f,-1.9f,-1.8f,-1.7f,-1.6f,-1.5f,-1.4f,-1.3f,-1.2f,-1.1f,
+      -1.0f,-0.9f,-0.8f,-0.7f,-0.6f,-0.5f,-0.4f,-0.3f,-0.2f,-0.1f,
+      0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f,
+      1.0f, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f, 1.7f, 1.8f, 1.9f,
+      2.0f, 2.1f, 2.2f, 2.3f, 2.4f, 2.5f, 2.6f, 2.7f, 2.8f, 2.9f,
+      3.0f, 3.1f, 3.2f, 3.3f, 3.4f, 3.5f, 3.6f, 3.7f, 3.8f, 3.9f,
+      4.0f, 4.1f, 4.2f, 4.3f, 4.4f, 4.5f, 4.6f, 4.7f, 4.8f, 4.9f,
+      5.0f
+    };
+    static const int dsamples = sizeof(drange) / sizeof(float);
+    static const int dcenter = dsamples / 2;
 
-    float c0 = -1.0f;
-    for (int cam_j : closest_cameras(cam_i)) {
-      for (int k = -16; k <= 16; ++k) {
-        float d = float(k) / 16.0f;
-        SampleWindow wj = sample(cam_j, o[d]);
-        float s = NormalizedCrossCorrelation(wi, wj);
-        c0 = fmaxf(s, c0);
-      }
+    float c[dsamples];
+    VoxelScore score; // TODO
+    for (int k = 0; k < dsamples; ++k) {
+      float d = drange[k];
+      c[k] = score(d);
     }
-    return c0;
+
+    float c0 = c[dcenter];
+    if (std::all_of(c, c+dsamples, [c0](float cd){ return c0 >= cd; }))
+      return c0;
+    return 0.0f;
   }
 
-  /*float compute(vec3 pos)
+  float compute(Point3 pos)
   {
     const float param_mju = 0.05f;
 
     float sum = 0.0f;
     for (int i = 0, n = cameras.size(); i < n; ++i) {
-      sum += vote(i, (point3)pos);
+      sum += vote(i, pos);
     }
     return expf(-param_mju * sum);
-  }*/
+  }
 
 };
 
@@ -174,30 +185,30 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       Vec3 center = (Vec3)vbox.center();
       Vec3 minpos = (Vec3)vbox.minpos;
       if (x > 0) {
-        float w = 0.00001f; // TODO
-        //if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
-        //  w = weight * pc.compute(copy_x(center, minpos));
-        //} else {
-        //  w = INFINITY;
-        //}
+        float w;
+        if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
+          w = weight * pc.compute((Point3)copy_x(center, minpos));
+        } else {
+          w = INFINITY;
+        }
         graph.set_neighbor_cap(node,-1, 0, 0, w);
       }
       if (y > 0) {
-        float w = 0.00001f; // TODO
-        //if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
-        //  w = weight * pc.compute(copy_y(center, minpos));
-        //} else {
-        //  w = INFINITY;
-        //}
+        float w;
+        if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
+          w = weight * pc.compute((Point3)copy_y(center, minpos));
+        } else {
+          w = INFINITY;
+        }
         graph.set_neighbor_cap(node, 0,-1, 0, w);
       }
       if (z > 0) {
-        float w = 0.00001f; // TODO
-        //if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
-        //  w = weight * pc.compute(copy_z(center, minpos));
-        //} else {
-        //  w = INFINITY;
-        //}
+        float w;
+        if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
+          w = weight * pc.compute((Point3)copy_z(center, minpos));
+        } else {
+          w = INFINITY;
+        }
         graph.set_neighbor_cap(node, 0, 0,-1, w);
       }
     }
@@ -230,6 +241,8 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 
   return result;
 }
+
+#if 0
 
 QList<QPointF> ncc_curve(const VoxelModel& model,
                          const QList<Camera>& cameras,
@@ -311,5 +324,7 @@ QImage vote_image(const VoxelModel& model,
 
   return canvas.mirrored();
 }
+
+#endif
 
 }
