@@ -112,6 +112,8 @@ struct PhotoConsistency {
     static const int dsamples = sizeof(drange) / sizeof(float);
     //static const int dcenter = dsamples / 2;
 
+    //QList<int> jcams = closest_cameras(cam_i, pos); // TODO: integrate to VoxelScore
+
     double c[dsamples];
     VoxelScore score; // TODO
     for (int k = 0; k < dsamples; ++k) {
