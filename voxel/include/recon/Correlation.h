@@ -28,6 +28,18 @@ struct SampleWindow {
   {
     set_bilinear(image, xy);
     //set_floor(image, xy);
+
+    // normalize pixel value to 0.0 - 1.0
+    for (int i = 0; i < 121; ++i) {
+      red[i] /= 255.0f;
+      green[i] /= 255.0f;
+      blue[i] /= 255.0f;
+    }
+  }
+
+  inline Vec3 operator[](int i) const
+  {
+    return Vec3{ red[i], green[i], blue[i] };
   }
 
   inline void set_floor(const QImage& image, Vec3 xy)
@@ -110,6 +122,8 @@ static const Mat3 RGB_TO_YUV = Mat3{
   Vec3{ 0.114f, 0.436f, -0.100f }
 };
 
+static const Vec3 RGB_TO_GRAY = Vec3( 0.299f, 0.587f, 0.114f );
+
 struct NormalizedCrossCorrelation {
   float value;
 
@@ -120,44 +134,38 @@ struct NormalizedCrossCorrelation {
 
   static float zncc(const SampleWindow& wi, const SampleWindow& wj)
   {
-    Vec3 avg1 = Vec3::zero(), avg2 = Vec3::zero();
-    for (int i = 0; i < 121; ++i)
-      avg1 = avg1 + Vec3(wi.red[i], wi.green[i], wi.blue[i]) / 121.0f;
-    for (int i = 0; i < 121; ++i)
-      avg2 = avg2 + Vec3(wj.red[i], wj.green[i], wj.blue[i]) / 121.0f;
-
-    Vec3 s1 = Vec3::zero(), s2 = Vec3::zero();
+    // convert RGB to GRAY
+    float yi[121], yj[121];
     for (int i = 0; i < 121; ++i) {
-      Vec3 v1 = Vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
-      v1 = RGB_TO_YUV * v1;
-      s1 = s1 + square(v1);
-    }
-    for (int i = 0; i < 121; ++i) {
-      Vec3 v2 = Vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
-      v2 = RGB_TO_YUV * v2;
-      s2 = s2 + square(v2);
-    }
-    s1 = rsqrt(s1);
-    s2 = rsqrt(s2);
-
-    Vec3 ncc = Vec3::zero();
-    for (int i = 0; i < 121; ++i) {
-      Vec3 v1 = Vec3(wi.red[i], wi.green[i], wi.blue[i]) - avg1;
-      Vec3 v2 = Vec3(wj.red[i], wj.green[i], wj.blue[i]) - avg2;
-      v1 = RGB_TO_YUV * v1;
-      v2 = RGB_TO_YUV * v2;
-      ncc = ncc + mul(mul(v1, s1), mul(v2, s2));
+      yi[i] = (float)dot(RGB_TO_GRAY, wi[i]);
+      yj[i] = (float)dot(RGB_TO_GRAY, wj[i]);
     }
 
-    float y = (float)ncc.x();
-    float u = (float)ncc.y();
-    float v = (float)ncc.z();
+    // compute mean
+    float ai = 0.0f, aj = 0.0f;
+    for (int i = 0; i < 121; ++i) {
+      ai += yi[i] / 121.0f;
+      aj += yj[i] / 121.0f;
+    }
 
-    if (isnan(y) || isnan(u) || isnan(v))
+    // compute variance
+    float si = 0.0f, sj = 0.0f;
+    for (int i = 0; i < 121; ++i) {
+      si += powf((yi[i] - ai), 2);
+      sj += powf((yj[i] - aj), 2);
+    }
+    si = sqrtf(si);
+    sj = sqrtf(sj);
+
+    // compute dot product of two normalized vector
+    float ncc = 0.0f;
+    for (int i = 0; i < 121; ++i) {
+      ncc += ((yi[i] - ai) / si) * ((yj[i] - aj) / sj);
+    }
+
+    if (isnan(ncc))
       return -1.0f;
-
-    return 0.5f * y + 0.25f * u + 0.25f * v;
-    //return y;
+    return ncc;
   }
 
   inline operator float() const

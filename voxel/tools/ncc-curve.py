@@ -82,13 +82,13 @@ class VoxelVisualizer:
         vpos_j1 = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_j)[0,0]
         vpos_j2 = cv2.perspectiveTransform(np.array([[np.add(voxel_pos, voxel_dir)]]), tfm_j)[0,0]
         # draw epipolar lines
-        #canvas = np.copy(image_i)
-        #cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (0,0,255), 3)
-        #cv2.imshow("Camera i = %d" % cam_i, canvas)
-        #canvas = np.copy(image_j)
-        #cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (0,0,255), 1)
-        #cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
-        #cv2.imshow("Camera j = %d" % cam_j, canvas)
+        canvas = np.copy(image_i)
+        cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (0,0,255), 3)
+        cv2.imshow("Camera i = %d" % cam_i, canvas)
+        canvas = np.copy(image_j)
+        cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (0,0,255), 1)
+        cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
+        cv2.imshow("Camera j = %d" % cam_j, canvas)
         # compute NCC
         xdata = np.arange(-5.0, 5.0, 0.01)
         ydata = np.array(map(gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir), xdata))
