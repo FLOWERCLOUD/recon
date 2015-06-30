@@ -112,7 +112,7 @@ struct PhotoConsistency {
     static const int dsamples = sizeof(drange) / sizeof(float);
     static const int dcenter = dsamples / 2;
 
-    float c[dsamples];
+    double c[dsamples];
     VoxelScore score; // TODO
     for (int k = 0; k < dsamples; ++k) {
       float d = drange[k];
@@ -120,7 +120,7 @@ struct PhotoConsistency {
     }
 
     float c0 = c[dcenter];
-    if (std::all_of(c, c+dsamples, [c0](float cd){ return c0 >= cd; }))
+    if (std::all_of(c, c+dsamples, [c0](double cd){ return c0 >= cd; }))
       return c0;
     return 0.0f;
   }
