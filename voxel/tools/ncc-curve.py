@@ -170,7 +170,7 @@ class VoxelVisualizer:
         plt.axvline(-1.0, -1.0, 1.0, linestyle='--', color='r')
         plt.plot(xdata, ydata)
 
-    def vote(self, cam_i):
+    def vote1(self, cam_i):
         import numpy as np
         score = self.gen_score(cam_i)
         xdata = np.arange(-5.0, 5.0, 0.05)
@@ -180,16 +180,43 @@ class VoxelVisualizer:
             return c0
         return 0.0
 
-    def visualize_votes(self):
+    def visualize_votes1(self):
         import numpy as np
         xdata = np.array(range(0,len(self.cameras)))
-        ydata = np.array(map(lambda i: self.vote(i), xdata))
+        ydata = np.array(map(lambda i: self.vote1(i), xdata))
         import matplotlib.pyplot as plt
         plt.figure()
-        plt.suptitle("Vote")
+        plt.suptitle("Vote (version 1)")
+        plt.axis([np.min(xdata), np.max(xdata), -1.1, 1.1])
         plt.xlabel("i-th camera")
         plt.ylabel("VOTE(i)")
         plt.plot(xdata, ydata, '.')
+
+    def vote2(self, cam_i):
+        import numpy as np
+        score = self.gen_score(cam_i)
+        xdata = np.arange(-5.0, 5.0, 0.05)
+        ydata = np.array(map(score, xdata))
+        c0 = np.max(ydata[xdata <= 1.0])
+        if np.all(c0 >= ydata):
+            return c0
+
+    def visualize_votes2(self):
+        import numpy as np
+        xdata = np.array(range(0,len(self.cameras)))
+        ydata = np.array(map(lambda i: self.vote2(i), xdata))
+        #print(ydata)
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.suptitle("Vote (version 2)")
+        plt.axis([np.min(xdata), np.max(xdata), -1.1, 1.1])
+        plt.xlabel("i-th camera")
+        plt.ylabel("VOTE(i)")
+        plt.plot(xdata, ydata, '.')
+        #
+        total = np.nansum(np.array(filter(lambda x: x is not None, ydata)), dtype=np.float)
+        rho = np.exp(np.multiply(-0.05, total))
+        print("total = %f" % total, "rho = %f" % rho)
 
 def mainfunc():
     global ARGS
@@ -220,7 +247,8 @@ def mainfunc():
     #print("closest cameras = ", visualizer.find_closest_cameras(ARGS.cam_i, visualizer.voxel_pos))
     #visualizer.visualize_ncc_curve(ARGS.cam_i, ARGS.cam_j)
     #visualizer.visualize_score(ARGS.cam_i)
-    visualizer.visualize_votes()
+    visualizer.visualize_votes1()
+    visualizer.visualize_votes2()
     # Wait
     plt.show()
     #cv2.waitKey(0)
