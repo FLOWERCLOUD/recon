@@ -94,7 +94,7 @@ struct PhotoConsistency {
     // TODO: operator()
   };
 
-  float vote(int cam_i, Point3 pos)
+  double vote(int cam_i, Point3 pos)
   {
     static const float drange[] = {
       -5.0f,-4.9f,-4.8f,-4.7f,-4.6f,-4.5f,-4.4f,-4.3f,-4.2f,-4.1f,
@@ -110,7 +110,7 @@ struct PhotoConsistency {
       5.0f
     };
     static const int dsamples = sizeof(drange) / sizeof(float);
-    static const int dcenter = dsamples / 2;
+    //static const int dcenter = dsamples / 2;
 
     double c[dsamples];
     VoxelScore score; // TODO
@@ -119,10 +119,15 @@ struct PhotoConsistency {
       c[k] = score(d);
     }
 
-    float c0 = c[dcenter];
+    double c0 = 0.0;
+    for (int k = 0; k < dsamples; ++k) {
+      if (fabsf(drange[k]) <= 1.0f)
+        c0 = fmax(c0, c[k]);
+    }
+
     if (std::all_of(c, c+dsamples, [c0](double cd){ return c0 >= cd; }))
       return c0;
-    return 0.0f;
+    return 0.0;
   }
 
   float compute(Point3 pos)
@@ -141,7 +146,7 @@ struct PhotoConsistency {
 VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
 {
   // Allocate Graph
-  using GridGraph = GridGraph_3D_6C<float, float, double>;
+  using GridGraph = GridGraph_3D_6C<double, double, double>;
   GridGraph graph(model.width, model.height, model.depth);
 
   //
@@ -154,7 +159,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   // Setup Graph - Visual Hull
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
-    float weight = param_lambda * voxel_h * voxel_h * voxel_h;
+    double weight = (double)param_lambda * voxel_h * voxel_h * voxel_h;
     //printf("Wb = %f\n", weight);
 
     for (uint64_t m : voxels)
@@ -165,7 +170,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       morton_decode(m, x, y, z);
 
       if (foreground[m]) {
-        graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0f);
+        graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0);
       } else {
         graph.set_terminal_cap(graph.node_id(x, y, z), weight, INFINITY);
       }
@@ -175,7 +180,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   // Setup Graph - Photo Consistency
   {
     PhotoConsistency pc(model, cameras);
-    float weight = 4.0f / 3.0f * float(M_PI) * voxel_h * voxel_h;
+    double weight = 4.0 / 3.0 * M_PI * voxel_h * voxel_h;
 
     for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
       uint32_t x, y, z;
@@ -185,7 +190,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       Vec3 center = (Vec3)vbox.center();
       Vec3 minpos = (Vec3)vbox.minpos;
       if (x > 0) {
-        float w;
+        double w;
         if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
           w = weight * pc.compute((Point3)copy_x(center, minpos));
         } else {
@@ -194,7 +199,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
         graph.set_neighbor_cap(node,-1, 0, 0, w);
       }
       if (y > 0) {
-        float w;
+        double w;
         if (foreground[m] || foreground[morton_encode(x,y-1,z)]) {
           w = weight * pc.compute((Point3)copy_y(center, minpos));
         } else {
@@ -203,7 +208,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
         graph.set_neighbor_cap(node, 0,-1, 0, w);
       }
       if (z > 0) {
-        float w;
+        double w;
         if (foreground[m] || foreground[morton_encode(x,y,z-1)]) {
           w = weight * pc.compute((Point3)copy_z(center, minpos));
         } else {
