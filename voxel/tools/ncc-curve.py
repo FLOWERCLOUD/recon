@@ -256,11 +256,9 @@ def mainfunc():
     #visualizer.visualize_votes1()
     visualizer.visualize_votes2()
 
-    for cam_i in range(0, len(cameras)):
-        if cam_i != 29:
-            continue
-        for cam_j in visualizer.find_closest_cameras(cam_i, visualizer.voxel_pos):
-            visualizer.visualize_ncc_curve(cam_i, cam_j)
+
+    for cam_j in visualizer.find_closest_cameras(ARGS.cam_i, visualizer.voxel_pos):
+        visualizer.visualize_ncc_curve(ARGS.cam_i, cam_j)
 
     # Wait
     plt.show()
