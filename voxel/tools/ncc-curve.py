@@ -92,6 +92,8 @@ class VoxelVisualizer:
         # compute NCC
         xdata = np.arange(-5.0, 5.0, 0.01)
         ydata = np.array(map(gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir), xdata))
+        #for i in range(0,len(xdata)):
+        #    print("sj(d=%f) = %f" % (xdata[i], ydata[i]))
         #from pysmoothing import sgolayfilt
         #ydata = sgolayfilt(ydata, 3, 7)
         # find maxima
@@ -159,6 +161,8 @@ class VoxelVisualizer:
         score = self.gen_score(cam_i)
         xdata = np.arange(-5.0, 5.0, 0.05)
         ydata = np.array(map(score, xdata))
+        for i in range(0,len(xdata)):
+            print("C(%f) = %f" % (xdata[i], ydata[i]))
         # plot score
         import matplotlib.pyplot as plt
         plt.figure()
@@ -173,9 +177,19 @@ class VoxelVisualizer:
     def vote1(self, cam_i):
         import numpy as np
         score = self.gen_score(cam_i)
-        xdata = np.arange(-5.0, 5.0, 0.05)
+        xdata = np.arange(-5.0, 5.0, 1.0) # d range
         ydata = np.array(map(score, xdata))
         c0 = score(0)
+        if np.all(c0 >= ydata):
+            return c0
+        return 0.0
+
+    def vote2(self, cam_i):
+        import numpy as np
+        score = self.gen_score(cam_i)
+        xdata = np.arange(-5.0, 5.0, 0.1) # d range
+        ydata = np.array(map(score, xdata))
+        c0 = np.max(ydata[np.abs(xdata) < 1.0])
         if np.all(c0 >= ydata):
             return c0
         return 0.0
@@ -192,20 +206,12 @@ class VoxelVisualizer:
         plt.ylabel("VOTE(i)")
         plt.plot(xdata, ydata, '.')
 
-    def vote2(self, cam_i):
-        import numpy as np
-        score = self.gen_score(cam_i)
-        xdata = np.arange(-5.0, 5.0, 0.05)
-        ydata = np.array(map(score, xdata))
-        c0 = np.max(ydata[xdata <= 1.0])
-        if np.all(c0 >= ydata):
-            return c0
-
     def visualize_votes2(self):
         import numpy as np
         xdata = np.array(range(0,len(self.cameras)))
         ydata = np.array(map(lambda i: self.vote2(i), xdata))
-        #print(ydata)
+        #for i in range(0,len(xdata)):
+        #    print("vote(i=%d) = %f" % (xdata[i], ydata[i]))
         import matplotlib.pyplot as plt
         plt.figure()
         plt.suptitle("Vote (version 2)")
@@ -244,11 +250,18 @@ def mainfunc():
         model['bbox'] = np.array(rootobj['model']['virtual_box'])
 
     visualizer = VoxelVisualizer(cameras, model, ARGS.voxel_x, ARGS.voxel_y, ARGS.voxel_z)
-    #print("closest cameras = ", visualizer.find_closest_cameras(ARGS.cam_i, visualizer.voxel_pos))
+    print("voxel_size = %f" % visualizer.voxel_size)
     #visualizer.visualize_ncc_curve(ARGS.cam_i, ARGS.cam_j)
     #visualizer.visualize_score(ARGS.cam_i)
-    visualizer.visualize_votes1()
+    #visualizer.visualize_votes1()
     visualizer.visualize_votes2()
+
+    for cam_i in range(0, len(cameras)):
+        if cam_i != 29:
+            continue
+        for cam_j in visualizer.find_closest_cameras(cam_i, visualizer.voxel_pos):
+            visualizer.visualize_ncc_curve(cam_i, cam_j)
+
     # Wait
     plt.show()
     #cv2.waitKey(0)
