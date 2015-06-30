@@ -63,18 +63,17 @@ class VoxelVisualizer:
         self.model = model
 
     def visualize_ncc_curve(self, cam_i, cam_j):
-        import cv2, numpy as np, matplotlib.pyplot as plt
+        import cv2, numpy as np
         voxel_pos = self.voxel_pos
         voxel_size = self.voxel_size
         cameras = self.cameras
-        plt.figure()
         # load images
         image_i = cv2.imread(cameras[cam_i]['image_path'])
         image_j = cv2.imread(cameras[cam_j]['image_path'])
         # compute direction from voxel
         voxel_dir = np.subtract(cameras[cam_i]['center'], voxel_pos)
         voxel_dir = normalize(voxel_dir)
-        voxel_dir = np.multiply(voxel_dir, voxel_size * 1.0)
+        voxel_dir = np.multiply(voxel_dir, voxel_size * 0.5)
         # project the voxel into the two images
         tfm_i = np.dot(cameras[cam_i]['intrinsic'], cameras[cam_i]['extrinsic'])
         tfm_j = np.dot(cameras[cam_j]['intrinsic'], cameras[cam_j]['extrinsic'])
@@ -83,30 +82,51 @@ class VoxelVisualizer:
         vpos_j1 = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_j)[0,0]
         vpos_j2 = cv2.perspectiveTransform(np.array([[np.add(voxel_pos, voxel_dir)]]), tfm_j)[0,0]
         # draw epipolar lines
-        canvas = np.copy(image_i)
-        cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (0,0,255), 3)
-        cv2.imshow("Camera i = %d" % cam_i, canvas)
-        canvas = np.copy(image_j)
-        cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (0,0,255), 1)
-        cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
-        cv2.imshow("Camera j = %d" % cam_j, canvas)
+        #canvas = np.copy(image_i)
+        #cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (0,0,255), 3)
+        #cv2.imshow("Camera i = %d" % cam_i, canvas)
+        #canvas = np.copy(image_j)
+        #cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (0,0,255), 1)
+        #cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
+        #cv2.imshow("Camera j = %d" % cam_j, canvas)
         # compute NCC
-        nhk = 32
-        xdata = np.array(map(lambda x: float(x-nhk) / float(nhk), range(0,2*nhk+1)))
+        xdata = np.arange(-5.0, 5.0, 0.01)
         ydata = np.array(map(gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir), xdata))
-        from pysmoothing import sgolayfilt
-        ydata = sgolayfilt(ydata, 3, 7)
-        plt.plot(xdata, ydata)
+        #from pysmoothing import sgolayfilt
+        #ydata = sgolayfilt(ydata, 3, 7)
         # find maxima
         from scipy.signal import argrelmax
         maxima = argrelmax(ydata)
+        # plot NCC
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.suptitle("NCC curve (i=%d, j=%d)" % (cam_i, cam_j))
         plt.axis([np.min(xdata), np.max(xdata), -1.1, 1.1])
+        plt.xlabel("d")
+        plt.ylabel("Sj(d) = NCC(i,j,o(d))")
+        plt.axvline(1.0, -1.0, 1.0, linestyle='--', color='r')
+        plt.axvline(-1.0, -1.0, 1.0, linestyle='--', color='r')
+        plt.axvline(3.0, -1.0, 1.0, linestyle=':', color='r')
+        plt.axvline(-3.0, -1.0, 1.0, linestyle=':', color='r')
+        plt.plot(xdata, ydata)
         plt.plot(xdata[maxima], ydata[maxima], '.')
 
-    def gen_combined_ncc(self, cam_i):
-        import cv2, numpy as np, matplotlib.pyplot as plt
-        from pysmoothing import sgolayfilt
-        from scipy.signal import argrelmax, gaussian
+    def find_closest_cameras(self, cam_i, x):
+        import numpy as np
+        cameras = self.cameras
+        ci = cameras[cam_i]
+        ni = normalize(np.subtract(ci['center'], x))
+        def f(j):
+            cj = cameras[j]
+            nj = normalize(np.subtract(cj['center'], x))
+            dp = np.dot(ni, nj)
+            #return (dp <= 0.999) and (dp >= 0.9396926207859084)
+            return (dp <= 0.984807753012208) and (dp >= 0.9396926207859084)
+        jcams = filter(f, range(0, len(cameras)))
+        return jcams
+
+    def gen_score(self, cam_i):
+        import cv2, numpy as np
         voxel_pos = self.voxel_pos
         voxel_size = self.voxel_size
         cameras = self.cameras
@@ -116,50 +136,60 @@ class VoxelVisualizer:
         # voxel direction
         voxel_dir = np.subtract(cameras[cam_i]['center'], voxel_pos)
         voxel_dir = normalize(voxel_dir)
-        voxel_dir = np.multiply(voxel_dir, voxel_size * 1.0)
-        # find Sj and dk
-        sjdk = None
-        dk = None
-        for cam_j in range(0, len(cameras)):
-            if cam_j == cam_i:
-                continue
-            # prepare cam_j
-            image_j = cv2.imread(cameras[cam_j]['image_path'])
-            tfm_j = np.dot(cameras[cam_j]['intrinsic'], cameras[cam_j]['extrinsic'])
-            # compute NCC
-            ncc = gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir)
-            nhk = 32
-            xdata = np.array(map(lambda x: float(x-nhk) / float(nhk), range(0,2*nhk+1)))
-            ydata = np.array(map(ncc, xdata))
-            ydata = sgolayfilt(ydata, 3, 7)
-            # find maxima
-            maxima = argrelmax(ydata)
-            # save result
-            if sjdk is not None:
-                sjdk = np.concatenate((sjdk, ydata[maxima]))
-                dk = np.concatenate((dk, xdata[maxima]))
-            else:
-                sjdk = np.array(ydata[maxima])
-                dk = np.array(xdata[maxima])
-        sjdk = np.divide(sjdk, float(len(cameras)))
-        def c_func(d):
-            w = gauss(np.subtract(d, dk))
-            return np.inner(sjdk, w)
-        return (c_func, len(dk))
+        voxel_dir = np.multiply(voxel_dir, voxel_size * 0.5)
+        # prepare closest cameras
+        jcams = self.find_closest_cameras(cam_i, voxel_pos)
+        #print("nearest cameras for %d = " % cam_i, jcams)
+        #for cam_j in jcams:
+        #    self.visualize_ncc_curve(cam_i, cam_j)
+        def prepare_camj(j):
+            image_j = cv2.imread(cameras[j]['image_path'])
+            tfm_j = np.dot(cameras[j]['intrinsic'], cameras[j]['extrinsic'])
+            ncc_j = gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir)
+            return (j, image_j, tfm_j, ncc_j)
+        jcams = map(prepare_camj, jcams)
+        # gen func
+        def score(d):
+            s = np.array(map(lambda t: t[-1](d), jcams))
+            return np.mean(s)
+        return score
 
-    #def visualize_combined_ncc(self, cam_i):
-    #    import numpy as np, matplotlib.pyplot as plt
-    #    c, nmaxima = self.gen_combined_ncc(cam_i)
-    #    x = np.arange(-5.0, 5.0, 0.01)
-    #    y = np.array(map(c, x))
-    #    plt.figure()
-    #    plt.plot(x, y)
+    def visualize_score(self, cam_i):
+        import cv2, numpy as np
+        score = self.gen_score(cam_i)
+        xdata = np.arange(-5.0, 5.0, 0.05)
+        ydata = np.array(map(score, xdata))
+        # plot score
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.suptitle("Score")
+        plt.axis([np.min(xdata), np.max(xdata), -1.1, 1.1])
+        plt.xlabel("d")
+        plt.ylabel("C(d)")
+        plt.axvline(1.0, -1.0, 1.0, linestyle='--', color='r')
+        plt.axvline(-1.0, -1.0, 1.0, linestyle='--', color='r')
+        plt.plot(xdata, ydata)
 
-    #def visualize_nmaxima(self):
-    #    import numpy as np, matplotlib.pyplot as plt
-    #    data = np.array(map(lambda x: self.gen_combined_ncc(x)[1], range(0,len(self.cameras))))
-    #    plt.figure()
-    #    plt.plot(data)
+    def vote(self, cam_i):
+        import numpy as np
+        score = self.gen_score(cam_i)
+        xdata = np.arange(-5.0, 5.0, 0.05)
+        ydata = np.array(map(score, xdata))
+        c0 = score(0)
+        if np.all(c0 >= ydata):
+            return c0
+        return 0.0
+
+    def visualize_votes(self):
+        import numpy as np
+        xdata = np.array(range(0,len(self.cameras)))
+        ydata = np.array(map(lambda i: self.vote(i), xdata))
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.suptitle("Vote")
+        plt.xlabel("i-th camera")
+        plt.ylabel("VOTE(i)")
+        plt.plot(xdata, ydata, '.')
 
 def mainfunc():
     global ARGS
@@ -187,30 +217,10 @@ def mainfunc():
         model['bbox'] = np.array(rootobj['model']['virtual_box'])
 
     visualizer = VoxelVisualizer(cameras, model, ARGS.voxel_x, ARGS.voxel_y, ARGS.voxel_z)
-    visualizer.visualize_ncc_curve(ARGS.cam_i, ARGS.cam_j)
-    #visualizer.visualize_combined_ncc(ARGS.cam_i)
-    #visualizer.visualize_nmaxima()
-
-    #plt.figure()
-    #x = np.arange(-5.0, 5.0, 0.01)
-    #plt.plot(x, gauss(x))
-
-    # Visualize NCC
-    #
-    #from scipy.interpolate import spline
-    #nxdata = np.linspace(-1.0, 1.0, 512)
-    #nydata = spline(xdata, ydata, nxdata)
-    #plt.plot(nxdata, nydata)
-
-    # Find maxima
-    #
-    #maxima = argrelmax(nydata)
-    #print(maxima)
-    #
-    #plt.plot(nxdata[maxima], nydata[maxima], '.')
-
-    # Parzen Window
-
+    #print("closest cameras = ", visualizer.find_closest_cameras(ARGS.cam_i, visualizer.voxel_pos))
+    #visualizer.visualize_ncc_curve(ARGS.cam_i, ARGS.cam_j)
+    #visualizer.visualize_score(ARGS.cam_i)
+    visualizer.visualize_votes()
     # Wait
     plt.show()
     #cv2.waitKey(0)
