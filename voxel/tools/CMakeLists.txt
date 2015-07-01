@@ -12,5 +12,5 @@ target_link_libraries(voxel recon-voxel)
 add_executable(dump-data dump-data.cpp)
 target_link_libraries(dump-data recon-voxel)
 
-add_executable(compute-weight compute-weight.cpp)
-target_link_libraries(compute-weight recon-voxel)
+add_executable(build-graph build-graph.cpp)
+target_link_libraries(build-graph recon-voxel)

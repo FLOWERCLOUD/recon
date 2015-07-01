@@ -13,11 +13,11 @@
 int main(int argc, char* argv[])
 {
   QCoreApplication app(argc, argv);
-  QCoreApplication::setApplicationName("compute-weight");
+  QCoreApplication::setApplicationName("build-graph");
   QCoreApplication::setApplicationVersion("1.0");
 
   QCommandLineParser parser;
-  parser.setApplicationDescription("Build graph weights");
+  parser.setApplicationDescription("Build a graph to optimize");
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
