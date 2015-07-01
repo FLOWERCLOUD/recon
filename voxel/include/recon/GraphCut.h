@@ -2,33 +2,29 @@
 
 /* MAJOR
 
-  Multi-view Stereo via Volumetric Graph-cuts and Occlusion Robust Photo-Consistency
-  George Vogiatzis, Carlos H. Esteban, Philip H. S. Torr, Roberto Cipolla
-  PAMI 2007
+  Computing geodesics and minimal surfaces via graph cuts
+  Y. Boykov and V. Kolmogorov
+  ICCV 2003
 
-  Multi-view Stereo via Volumetric Graph-cuts
-  George Vogiatzis, P.H.S. Torr, R. Cipolla
-  CVPR 2005
 */
 
-/* MINOR
+/* GRIDCUT
+  http://gridcut.com/
 
-  Shape from Photographs: A Multi-view Stereo Pipeline
-  C. Hernández and G. Vogiatzis
-  Computer Vision: Detection, Recognition and Reconstruction
-  2010 Springer-Verlag
+  An experimental comparison of min-cut/max-flow algorithms for energy minimization in vision
+  Y. Boykov and V Kolmogorov
+  PAMI 2004
 
-  Automatic 3D object segmentation in multiple views using volumetric graph-cuts
-  N.D.F. Campbell, G. Vogiatzis, C. Hernandez and R. Cipolla
-  Image and Vision Computing 2010
+  Parallel Graph-cuts by Adaptive Bottom-up Merging
+  Jiangyu Liu and Jian Sun:
+  ICCV 2010
 
-  Automatic Object Segmentation from Calibrated Images
-  N.D.F. Cambell, G. Vogiatzis, C. Hernández and R. Cipolla
-  CVMP 2011
+  Cache-efficient Graph Cuts on Structured Grids
+  Ondřej Jamriška, Daniel Sýkora, and Alexander Hornung
+  ICCV 2012
+
 */
 
-#include "Camera.h"
-#include "VoxelModel.h"
 #include "BuildGraph.h"
 
 namespace recon {

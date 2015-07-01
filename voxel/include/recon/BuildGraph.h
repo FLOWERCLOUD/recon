@@ -9,6 +9,7 @@
   Multi-view Stereo via Volumetric Graph-cuts
   George Vogiatzis, P.H.S. Torr, R. Cipolla
   CVPR 2005
+
 */
 
 /* MINOR
@@ -22,9 +23,6 @@
   N.D.F. Campbell, G. Vogiatzis, C. Hernandez and R. Cipolla
   Image and Vision Computing 2010
 
-  Automatic Object Segmentation from Calibrated Images
-  N.D.F. Cambell, G. Vogiatzis, C. Hernández and R. Cipolla
-  CVMP 2011
 */
 
 #include "Camera.h"

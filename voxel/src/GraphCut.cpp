@@ -1,14 +1,7 @@
-#include <vectormath.h>
-#include <vectormath/aos/utils/ray3.h>
-#include "Camera.h"
 #include "morton_code.h"
 #include "GraphCut.h"
-#include "VisualHull.h"
-#include "Correlation.h"
 #include <GridCut/GridGraph_3D_6C.h>
 #include <QList>
-#include <QImage>
-#include <QTextStream>
 #include <algorithm>
 #include <vector>
 #include <float.h>
@@ -18,20 +11,11 @@
 #define M_PI 3.141592653589793
 #endif
 
-#ifndef M_RSQRTPI
-#define M_RSQRTPI 0.5641895835477563
-#endif
-
-#ifndef M_RSQRT2
-#define M_RSQRT2 0.7071067811865476
-#endif
-
 namespace recon {
 
 using vectormath::aos::Vec3;
 using vectormath::aos::Vec4;
 using vectormath::aos::utils::Point3;
-using vectormath::aos::utils::Ray3;
 
 VoxelList graph_cut(const VoxelGraph& vgraph)
 {
@@ -168,32 +152,6 @@ QImage ncc_image(const VoxelModel& model,
   canvas.setText("Y Plane", QString::number(plane_y));
   canvas.setText("Camera i", QString::number(cam_i));
   canvas.setText("Camera j", QString::number(cam_j));
-
-  return canvas.mirrored();
-}
-
-QImage vote_image(const VoxelModel& model,
-                  const QList<Camera>& cameras,
-                  int plane_y,
-                  int cam_i)
-{
-  QImage canvas = QImage(model.width, model.depth, QImage::Format_ARGB32);
-  PhotoConsistency pc(model, cameras);
-
-  for (int i = 0; i < canvas.height(); ++i) {
-    for (int j = 0; j < canvas.width(); ++j) {
-      uint64_t morton = morton_encode(j, plane_y, i);
-      Point3 pos = model.element_box(morton).center();
-
-      float v = pc.vote_1(cam_i, pos);
-
-      int pix = (int)(fminf(fmaxf(v, 0.0f), 1.0f) * 255) & 0xFF;
-      canvas.setPixel(j,i,qRgb(pix, pix, pix));
-    }
-  }
-
-  canvas.setText("Y Plane", QString::number(plane_y));
-  canvas.setText("Camera i", QString::number(cam_i));
 
   return canvas.mirrored();
 }

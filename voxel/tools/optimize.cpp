@@ -32,10 +32,6 @@ int main(int argc, char* argv[])
   const QString graphPath = args.at(0);
   const QString optimizePath = args.at(1);
 
-  //for (recon::Camera cam : cameras) {
-  //  qDebug() << "mask path = " << cam.maskPath();
-  //}
-
   //recon::VoxelModel model(5, loader.model_boundingbox());
   recon::VoxelGraph graph;
   recon::VoxelList vlist = graph_cut(graph);
