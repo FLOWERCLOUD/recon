@@ -27,6 +27,10 @@ int main(int argc, char* argv[])
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
   parser.addPositionalArgument("data", "Output JSON data file");
+
+  QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
+  optLevel.setDefaultValue("7");
+  parser.addOption(optLevel);
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();
@@ -56,7 +60,9 @@ int main(int argc, char* argv[])
     cam.setMaskPath(mpath);
   }
 
-  recon::VoxelModel model(7, loader.model_boundingbox());
+  int level = parser.value(optLevel).toInt();
+  printf("level = %d\n", level);
+  recon::VoxelModel model(level, loader.model_boundingbox());
   QJsonObject rootobj;
 
   // Extract cameras

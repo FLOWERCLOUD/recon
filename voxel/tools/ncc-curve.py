@@ -267,4 +267,5 @@ def mainfunc():
 if __name__ == '__main__':
     mainfunc()
 
-# python2 ../voxel/tools/ncc-curve.py --voxel-x=55 --voxel-y=30 --voxel-z=58 --cam-i=34 --cam-j=36 data.json
+# python2 ../voxel/tools/ncc-curve.py --voxel-x=55 --voxel-y=30 --voxel-z=57 --cam-i=34 data-lv7.json
+# python2 ../voxel/tools/ncc-curve.py --voxel-x=13 --voxel-y=7 --voxel-z=14 --cam-i=31 data-lv5.json

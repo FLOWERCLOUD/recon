@@ -29,22 +29,10 @@
 
 #include "Camera.h"
 #include "VoxelModel.h"
-#include <QList>
-#include <QImage>
+#include "BuildGraph.h"
 
 namespace recon {
 
-VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras);
-
-//QList<QPointF> ncc_curve(const VoxelModel& model,
-//                         const QList<Camera>& cameras,
-//                         int voxel_x, int voxel_y, int voxel_z,
-//                         int cam_i, int cam_j);
-
-//QImage ncc_image(const VoxelModel& model, const QList<Camera>& cameras,
-//                 int plane_y, int cam_i, int cam_j);
-
-//QImage vote_image(const VoxelModel& model, const QList<Camera>& cameras,
-//                  int plane_y, int cam_i);
+VoxelList graph_cut(const VoxelGraph& graph);
 
 }
