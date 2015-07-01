@@ -89,9 +89,52 @@ struct PhotoConsistency {
   }
 
   struct VoxelScore {
-    // TODO: ncc
-    // TODO: score
-    // TODO: operator()
+    QList<QImage> image_js;
+    QList<Mat4> txfm_js;
+    Ray3 o;
+    SampleWindow sw_i;
+
+    VoxelScore(PhotoConsistency* pc, int cam_i, Point3 x)
+    : image_js()
+    , txfm_js()
+    , o()
+    , sw_i()
+    {
+      {
+        Camera ci = pc->cameras[cam_i];
+        QImage image_i = pc->image(cam_i);
+        int w = image_i.width(), h = image_i.height();
+        Mat4 txfm_i = ci.intrinsicForImage(w, h) * ci.extrinsic();
+        sw_i = SampleWindow(image_i, Vec3::proj(transform(txfm_i, x)));
+
+        Vec3 dir = normalize(ci.center() - x);
+        dir = dir * pc->voxel_size * 0.5f;
+        o = Ray3(x, dir);
+      }
+
+      for (int cam_j : pc->closest_cameras(cam_i, x)) {
+        Camera cj = pc->cameras[cam_j];
+        QImage image_j = pc->image(cam_j);
+        int w = image_j.width(), h = image_j.height();
+        Mat4 txfm_j = cj.intrinsicForImage(w, h) * cj.extrinsic();
+        image_js.append(image_j);
+        txfm_js.append(txfm_j);
+      }
+    }
+
+    inline double operator()(float d) const
+    {
+      int nj = image_js.size();
+      double sum = 0.0;
+      for (int j = 0; j < nj; ++j) {
+        QImage image_j = image_js[j];
+        Mat4 txfm_j = txfm_js[j];
+        // Compute NCC
+        SampleWindow sw_j(image_j, Vec3::proj(transform(txfm_j, o[d])));
+        sum += NormalizedCrossCorrelation(sw_i, sw_j);
+      }
+      return sum / (double)nj;
+    }
   };
 
   double vote(int cam_i, Point3 pos)
@@ -110,12 +153,9 @@ struct PhotoConsistency {
       5.0f
     };
     static const int dsamples = sizeof(drange) / sizeof(float);
-    //static const int dcenter = dsamples / 2;
-
-    //QList<int> jcams = closest_cameras(cam_i, pos); // TODO: integrate to VoxelScore
 
     double c[dsamples];
-    VoxelScore score; // TODO
+    VoxelScore score(this, cam_i, pos);
     for (int k = 0; k < dsamples; ++k) {
       float d = drange[k];
       c[k] = score(d);
@@ -132,15 +172,15 @@ struct PhotoConsistency {
     return 0.0;
   }
 
-  float compute(Point3 pos)
+  double compute(Point3 pos)
   {
-    const float param_mju = 0.05f;
+    const double param_mju = 0.05 * 256.0;
 
-    float sum = 0.0f;
+    double sum = 0.0;
     for (int i = 0, n = cameras.size(); i < n; ++i) {
       sum += vote(i, pos);
     }
-    return expf(-param_mju * sum);
+    return exp(-param_mju * sum);
   }
 
 };
@@ -159,9 +199,10 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
   std::vector<bool> foreground(model.morton_length, false);
 
   // Setup Graph - Visual Hull
+  printf("processing shape prior (visual hull)...\n");
   {
     QList<uint64_t> voxels = visual_hull(model, cameras);
-    double weight = (double)param_lambda * voxel_h * voxel_h * voxel_h;
+    double weight = (double)param_lambda * pow(voxel_h, 3.0);
     //printf("Wb = %f\n", weight);
 
     for (uint64_t m : voxels)
@@ -174,12 +215,14 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       if (foreground[m]) {
         graph.set_terminal_cap(graph.node_id(x, y, z), weight, 0.0);
       } else {
-        graph.set_terminal_cap(graph.node_id(x, y, z), weight, INFINITY);
+        graph.set_terminal_cap(graph.node_id(x, y, z), 0.0, INFINITY);
+        //graph.set_terminal_cap(graph.node_id(x, y, z), weight, INFINITY);
       }
     }
   }
 
   // Setup Graph - Photo Consistency
+  printf("processing surface prior (photo consistency)...\n");
   {
     PhotoConsistency pc(model, cameras);
     double weight = 4.0 / 3.0 * M_PI * voxel_h * voxel_h;
@@ -191,6 +234,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
       AABox vbox = model.element_box(m);
       Vec3 center = (Vec3)vbox.center();
       Vec3 minpos = (Vec3)vbox.minpos;
+      printf("current voxel = %d %d %d\n", x, y, z);
       if (x > 0) {
         double w;
         if (foreground[m] || foreground[morton_encode(x-1,y,z)]) {
@@ -199,6 +243,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
           w = INFINITY;
         }
         graph.set_neighbor_cap(node,-1, 0, 0, w);
+        graph.set_neighbor_cap(graph.node_id(x-1, y, z),1,0,0, w);
       }
       if (y > 0) {
         double w;
@@ -208,6 +253,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
           w = INFINITY;
         }
         graph.set_neighbor_cap(node, 0,-1, 0, w);
+        graph.set_neighbor_cap(graph.node_id(x, y-1, z),0,1,0, w);
       }
       if (z > 0) {
         double w;
@@ -217,6 +263,7 @@ VoxelList graph_cut(const VoxelModel& model, const QList<Camera>& cameras)
           w = INFINITY;
         }
         graph.set_neighbor_cap(node, 0, 0,-1, w);
+        graph.set_neighbor_cap(graph.node_id(x, y, z-1),0,0,1, w);
       }
     }
   }

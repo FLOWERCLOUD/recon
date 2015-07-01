@@ -54,9 +54,9 @@ int main(int argc, char* argv[])
   //  qDebug() << "mask path = " << cam.maskPath();
   //}
 
-  recon::VoxelModel model(7, loader.model_boundingbox());
-  //recon::VoxelList vlist = graph_cut(model, cameras);
-  //recon::save_ply("voxels.ply", model, vlist);
+  recon::VoxelModel model(5, loader.model_boundingbox());
+  recon::VoxelList vlist = graph_cut(model, cameras);
+  recon::save_ply("voxels.ply", model, vlist);
 
   //QImage img = recon::ncc_image(model, cameras, 30, 35, 36);
   //img.save("ncc-35-36.png");
