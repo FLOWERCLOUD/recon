@@ -34,7 +34,7 @@ def run(finput):
         if (int(buf[1])):
             graph.add_tedge(nodes[x,y,z], Wb, 0.0)
         else:
-            graph.add_tedge(nodes[x,y,z], 0.0, float('inf'))
+            graph.add_tedge(nodes[x,y,z], Wb, float('inf'))
     while True:
         buf = finput.readline()
         if not buf:

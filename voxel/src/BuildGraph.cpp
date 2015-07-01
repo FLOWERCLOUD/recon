@@ -219,16 +219,28 @@ void build_graph(VoxelGraph& graph,
       //printf("current voxel = %d %d %d\n", x, y, z);
 
       if (x > 0) {
-        double v = pc.total_votes((Point3)copy_x(center, minpos));
-        x_edges[morton_encode(x-1,y,z)] = v;
+        if (graph.is_foreground(m) || graph.is_foreground(x-1,y,z)) {
+          double v = pc.total_votes((Point3)copy_x(center, minpos));
+          x_edges[morton_encode(x-1,y,z)] = v;
+        } else {
+          x_edges[morton_encode(x-1,y,z)] = INFINITY;
+        }
       }
       if (y > 0) {
-        double v = pc.total_votes((Point3)copy_y(center, minpos));
-        y_edges[morton_encode(x,y-1,z)] = v;
+        if (graph.is_foreground(m) || graph.is_foreground(x,y-1,z)) {
+          double v = pc.total_votes((Point3)copy_y(center, minpos));
+          y_edges[morton_encode(x,y-1,z)] = v;
+        } else {
+          x_edges[morton_encode(x,y-1,z)] = INFINITY;
+        }
       }
       if (z > 0) {
-        double v = pc.total_votes((Point3)copy_z(center, minpos));
-        z_edges[morton_encode(x,y,z-1)] = v;
+        if (graph.is_foreground(m) || graph.is_foreground(x,y,z-1)) {
+          double v = pc.total_votes((Point3)copy_z(center, minpos));
+          z_edges[morton_encode(x,y,z-1)] = v;
+        } else {
+          x_edges[morton_encode(x,y,z-1)] = INFINITY;
+        }
       }
     }
   }
