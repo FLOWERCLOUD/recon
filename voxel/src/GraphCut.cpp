@@ -26,7 +26,7 @@ VoxelList graph_cut(const VoxelGraph& vgraph)
   const uint64_t length = vgraph.width * vgraph.width * vgraph.width;
   const double voxel_h = vgraph.voxel_size;
   const double param_lambda = 0.5;
-  const double param_mju = 0.05 * 255.0;
+  const double param_mju = 7.0;
   const double wb = param_lambda * pow(voxel_h, 3.0);
   const double wn = 4.0 / 3.0 * M_PI * voxel_h * voxel_h;
 
@@ -36,11 +36,10 @@ VoxelList graph_cut(const VoxelGraph& vgraph)
     morton_decode(m, x, y, z);
     int node = graph.node_id(x, y, z);
 
-    if (vgraph.is_foreground(m)) {
+    if (vgraph.foreground[m]) {
       graph.set_terminal_cap(node, wb, 0.0);
     } else {
-      graph.set_terminal_cap(node, 0.0, INFINITY);
-      //graph.set_terminal_cap(node, weight, INFINITY);
+      graph.set_terminal_cap(node, wb, INFINITY);
     }
   }
 
@@ -48,26 +47,24 @@ VoxelList graph_cut(const VoxelGraph& vgraph)
   for (uint64_t m = 0; m < length; ++m) {
     uint32_t x, y, z;
     morton_decode(m, x, y, z);
-    int node = graph.node_id(x, y, z);
-    double w;
 
-    if ((w = wn * exp(-param_mju * vgraph.edge(m,1,0,0))) > 0.0) {
-      graph.set_neighbor_cap(node, 1, 0, 0, w);
+    if (x < vgraph.width-1) {
+      int n1 = graph.node_id(x,y,z), n2 = graph.node_id(x+1,y,z);
+      double w = wn * exp(-param_mju * vgraph.x_edges[m]);
+      graph.set_neighbor_cap(n1,1,0,0, w);
+      graph.set_neighbor_cap(n2,-1,0,0, w);
     }
-    if ((w = wn * exp(-param_mju * vgraph.edge(m,-1,0,0))) > 0.0) {
-      graph.set_neighbor_cap(node,-1, 0, 0, w);
+    if (y < vgraph.width-1) {
+      int n1 = graph.node_id(x,y,z), n2 = graph.node_id(x,y+1,z);
+      double w = wn * exp(-param_mju * vgraph.y_edges[m]);
+      graph.set_neighbor_cap(n1,0,1,0, w);
+      graph.set_neighbor_cap(n2,0,-1,0, w);
     }
-    if ((w = wn * exp(-param_mju * vgraph.edge(m,0,1,0))) > 0.0) {
-      graph.set_neighbor_cap(node, 0, 1, 0, w);
-    }
-    if ((w = wn * exp(-param_mju * vgraph.edge(m,0,-1,0))) > 0.0) {
-      graph.set_neighbor_cap(node, 0,-1, 0, w);
-    }
-    if ((w = wn * exp(-param_mju * vgraph.edge(m,0,0,1))) > 0.0) {
-      graph.set_neighbor_cap(node, 0, 0, 1, w);
-    }
-    if ((w = wn * exp(-param_mju * vgraph.edge(m,0,0,-1))) > 0.0) {
-      graph.set_neighbor_cap(node, 0, 0,-1, w);
+    if (z < vgraph.width-1) {
+      int n1 = graph.node_id(x,y,z), n2 = graph.node_id(x,y,z+1);
+      double w = wn * exp(-param_mju * vgraph.z_edges[m]);
+      graph.set_neighbor_cap(n1,0,0,1, w);
+      graph.set_neighbor_cap(n2,0,0,-1, w);
     }
   }
 

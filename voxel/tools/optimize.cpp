@@ -6,8 +6,67 @@
 #include <QString>
 #include <QtDebug>
 #include <QImage>
+#include <QFile>
+#include <QTextStream>
 #include <stdlib.h>
 #include <iostream>
+
+static void decode_xyz(const QString& s, int& x, int& y, int& z)
+{
+  QStringRef s2 = s.midRef(1,-2);
+  auto v = s2.split(',');
+  x = v[0].toInt();
+  y = v[1].toInt();
+  z = v[2].toInt();
+}
+
+static bool load_graph(recon::VoxelGraph& graph, const QString& path)
+{
+  using namespace recon;
+
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    qDebug() << "Cannot open graph file!";
+    return false;
+  }
+
+  QTextStream stream(&file);
+
+  stream >> graph.level
+         >> graph.width
+         >> graph.voxel_size;
+
+  uint64_t length = graph.width * graph.width * graph.width;
+  graph.foreground.resize(length, false);
+  graph.x_edges.resize(length, 0.0);
+  graph.y_edges.resize(length, 0.0);
+  graph.z_edges.resize(length, 0.0);
+
+  QString xyz, dir;
+  for (uint64_t i = 0; i < length; ++i) {
+    int x, y, z;
+    int flag;
+    stream >> xyz >> flag;
+    decode_xyz(xyz, x, y, z);
+    graph.foreground[morton_encode(x, y, z)] = flag;
+  }
+
+  for (uint64_t i = 0; i < length*3; ++i) {
+    int x, y, z;
+    double w;
+    stream >> xyz >> w >> dir;
+    decode_xyz(xyz, x, y, z);
+    if (dir == "+x") {
+      graph.x_edges[morton_encode(x, y, z)] = w;
+    } else if (dir == "+y") {
+      graph.y_edges[morton_encode(x, y, z)] = w;
+    } else if (dir == "+z") {
+      graph.z_edges[morton_encode(x, y, z)] = w;
+    }
+  }
+
+  return true;
+}
 
 int main(int argc, char* argv[])
 {
@@ -33,7 +92,9 @@ int main(int argc, char* argv[])
   const QString outputPath = args.at(1);
 
   recon::VoxelGraph graph;
-  // TODO: load graph from file
+  if (!load_graph(graph, graphPath)) {
+    return 1;
+  }
 
   recon::VoxelList vlist = graph_cut(graph);
   recon::VoxelModel model(graph.level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));

@@ -220,7 +220,7 @@ void build_graph(VoxelGraph& graph,
 
       if (x > 0) {
         uint64_t m2 = morton_encode(x-1,y,z);
-        if (graph.is_foreground(m) || graph.is_foreground(m2)) {
+        if (graph.foreground[m] || graph.foreground[m2]) {
           Point3 midpoint = (Point3)copy_x(center, minpos);
           double v = pc.total_votes(midpoint);
           x_edges[m2] = v;
@@ -228,7 +228,7 @@ void build_graph(VoxelGraph& graph,
       }
       if (y > 0) {
         uint64_t m2 = morton_encode(x,y-1,z);
-        if (graph.is_foreground(m) || graph.is_foreground(m2)) {
+        if (graph.foreground[m] || graph.foreground[m2]) {
           Point3 midpoint = (Point3)copy_y(center, minpos);
           double v = pc.total_votes(midpoint);
           y_edges[m2] = v;
@@ -236,7 +236,7 @@ void build_graph(VoxelGraph& graph,
       }
       if (z > 0) {
         uint64_t m2 = morton_encode(x,y,z-1);
-        if (graph.is_foreground(m) || graph.is_foreground(m2)) {
+        if (graph.foreground[m] || graph.foreground[m2]) {
           Point3 midpoint = (Point3)copy_z(center, minpos);
           double v = pc.total_votes(midpoint);
           z_edges[m2] = v;
