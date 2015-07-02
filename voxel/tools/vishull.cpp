@@ -9,6 +9,38 @@
 #include <QTextStream>
 #include <stdlib.h>
 #include <iostream>
+#include <vector>
+
+static recon::VoxelList
+trim_voxels(const recon::VoxelModel& model, const recon::VoxelList& vlist)
+{
+  using namespace recon;
+
+  std::vector<bool> foreground(model.morton_length, false);
+  for (uint64_t m : vlist) {
+      foreground[m] = true;
+  }
+
+  VoxelList result;
+  result.reserve(vlist.size());
+
+  uint32_t w = model.width, h = model.height, d = model.depth;
+  for (uint64_t m : vlist) {
+    uint32_t x, y, z;
+    morton_decode(m, x, y, z);
+    bool surface =
+      (x == 0 || !foreground[morton_encode(x-1,y,z)]) ||
+      (x == w-1 || !foreground[morton_encode(x+1,y,z)]) ||
+      (y == 0 || !foreground[morton_encode(x,y-1,z)]) ||
+      (y == h-1 || !foreground[morton_encode(x,y+1,z)]) ||
+      (z == 0 || !foreground[morton_encode(x,y,z-1)]) ||
+      (z == d-1 || !foreground[morton_encode(x,y,z+1)]);
+    if (surface)
+      result.append(m);
+  }
+
+  return result;
+}
 
 int main(int argc, char* argv[])
 {
@@ -60,6 +92,7 @@ int main(int argc, char* argv[])
 
   recon::VoxelModel model(level, loader.model_boundingbox());
   recon::VoxelList vlist = recon::visual_hull(model, cameras);
+  vlist = trim_voxels(model, vlist);
 
   recon::VoxelModel model2(level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
   recon::save_ply(outputPath, model2, vlist);
