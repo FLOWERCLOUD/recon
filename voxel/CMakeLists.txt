@@ -15,7 +15,10 @@ target_link_libraries(recon-voxel
 )
 target_compile_options(recon-voxel
   PUBLIC
+  -msse4.1
+  -mavx
   $<$<NOT:$<CONFIG:Debug>>:-O2>
+  $<$<CONFIG:Debug>:-g>
 )
 target_include_directories(recon-voxel
   PUBLIC
