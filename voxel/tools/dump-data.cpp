@@ -1,5 +1,5 @@
 #include <recon/CameraLoader.h>
-#include <recon/GraphCut.h>
+#include <recon/VoxelModel.h>
 #include <recon/numerical_method.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>

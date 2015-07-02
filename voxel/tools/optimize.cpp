@@ -13,7 +13,7 @@
 
 static void decode_xyz(const QString& s, int& x, int& y, int& z)
 {
-  QStringRef s2 = s.midRef(1,-2);
+  QStringRef s2 = s.midRef(1, s.size()-2);
   auto v = s2.split(',');
   x = v[0].toInt();
   y = v[1].toInt();
@@ -48,6 +48,7 @@ static bool load_graph(recon::VoxelGraph& graph, const QString& path)
     int flag;
     stream >> xyz >> flag;
     decode_xyz(xyz, x, y, z);
+    //printf("%d %d %d %d\n", x, y, z, flag);
     graph.foreground[morton_encode(x, y, z)] = flag;
   }
 
@@ -80,6 +81,14 @@ int main(int argc, char* argv[])
   parser.addVersionOption();
   parser.addPositionalArgument("graph", "Input graph file");
   parser.addPositionalArgument("output", "Output voxel list file");
+
+  QCommandLineOption optLambda(QStringList() << "l" << "lambda", "Lambda", "lambda");
+  optLambda.setDefaultValue("0.5");
+  parser.addOption(optLambda);
+  QCommandLineOption optMju(QStringList() << "m" << "mju", "Mju", "mju");
+  optMju.setDefaultValue("2.0");
+  parser.addOption(optMju);
+
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();
@@ -96,7 +105,10 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  recon::VoxelList vlist = graph_cut(graph);
+  double lambda = parser.value(optLambda).toDouble();
+  double mju = parser.value(optMju).toDouble();
+
+  recon::VoxelList vlist = graph_cut(graph, lambda, mju);
   recon::VoxelModel model(graph.level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
   recon::save_ply(outputPath, model, vlist);
 

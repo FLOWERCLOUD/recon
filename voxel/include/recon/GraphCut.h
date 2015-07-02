@@ -29,6 +29,6 @@
 
 namespace recon {
 
-VoxelList graph_cut(const VoxelGraph& graph);
+VoxelList graph_cut(const VoxelGraph& graph, double lambda, double mju);
 
 }

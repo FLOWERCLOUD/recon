@@ -17,7 +17,7 @@ using vectormath::aos::Vec3;
 using vectormath::aos::Vec4;
 using vectormath::aos::utils::Point3;
 
-VoxelList graph_cut(const VoxelGraph& vgraph)
+VoxelList graph_cut(const VoxelGraph& vgraph, double lambda, double mju)
 {
   // Allocate Graph
   using GridGraph = GridGraph_3D_6C<double, double, double>;
@@ -25,9 +25,7 @@ VoxelList graph_cut(const VoxelGraph& vgraph)
 
   const uint64_t length = vgraph.width * vgraph.width * vgraph.width;
   const double voxel_h = vgraph.voxel_size;
-  const double param_lambda = 0.5;
-  const double param_mju = 7.0;
-  const double wb = param_lambda * pow(voxel_h, 3.0);
+  const double wb = lambda * voxel_h * voxel_h * voxel_h;
   const double wn = 4.0 / 3.0 * M_PI * voxel_h * voxel_h;
 
   // Setup Terminal Edges
@@ -50,19 +48,19 @@ VoxelList graph_cut(const VoxelGraph& vgraph)
 
     if (x < vgraph.width-1) {
       int n1 = graph.node_id(x,y,z), n2 = graph.node_id(x+1,y,z);
-      double w = wn * exp(-param_mju * vgraph.x_edges[m]);
+      double w = wn * exp(-mju * vgraph.x_edges[m]);
       graph.set_neighbor_cap(n1,1,0,0, w);
       graph.set_neighbor_cap(n2,-1,0,0, w);
     }
     if (y < vgraph.width-1) {
       int n1 = graph.node_id(x,y,z), n2 = graph.node_id(x,y+1,z);
-      double w = wn * exp(-param_mju * vgraph.y_edges[m]);
+      double w = wn * exp(-mju * vgraph.y_edges[m]);
       graph.set_neighbor_cap(n1,0,1,0, w);
       graph.set_neighbor_cap(n2,0,-1,0, w);
     }
     if (z < vgraph.width-1) {
       int n1 = graph.node_id(x,y,z), n2 = graph.node_id(x,y,z+1);
-      double w = wn * exp(-param_mju * vgraph.z_edges[m]);
+      double w = wn * exp(-mju * vgraph.z_edges[m]);
       graph.set_neighbor_cap(n1,0,0,1, w);
       graph.set_neighbor_cap(n2,0,0,-1, w);
     }
