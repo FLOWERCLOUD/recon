@@ -63,13 +63,13 @@ class VoxelVisualizer:
         self.model = model
 
     def visualize_ncc_curve(self, cam_i, cam_j):
-        import cv2, numpy as np
+        import cv2, numpy as np, matplotlib.pyplot as plt
         voxel_pos = self.voxel_pos
         voxel_size = self.voxel_size
         cameras = self.cameras
         # load images
-        image_i = cv2.imread(cameras[cam_i]['image_path'])
-        image_j = cv2.imread(cameras[cam_j]['image_path'])
+        image_i = plt.imread(cameras[cam_i]['image_path'])
+        image_j = plt.imread(cameras[cam_j]['image_path'])
         # compute direction from voxel
         voxel_dir = np.subtract(cameras[cam_i]['center'], voxel_pos)
         voxel_dir = normalize(voxel_dir)
@@ -82,13 +82,17 @@ class VoxelVisualizer:
         vpos_j1 = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_j)[0,0]
         vpos_j2 = cv2.perspectiveTransform(np.array([[np.add(voxel_pos, voxel_dir)]]), tfm_j)[0,0]
         # draw epipolar lines
+        plt.figure()
+        plt.suptitle("Camera i = %d" % cam_i)
         canvas = np.copy(image_i)
-        cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (0,0,255), 3)
-        cv2.imshow("Camera i = %d" % cam_i, canvas)
+        cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (255,0,0), 3)
+        plt.imshow(canvas)
+        plt.figure()
+        plt.suptitle("Camera j = %d" % cam_j)
         canvas = np.copy(image_j)
-        cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (0,0,255), 1)
+        cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (255,0,0), 1)
         cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
-        cv2.imshow("Camera j = %d" % cam_j, canvas)
+        plt.imshow(canvas)
         # compute NCC
         xdata = np.arange(-5.0, 5.0, 0.01)
         ydata = np.array(map(gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir), xdata))
@@ -100,7 +104,6 @@ class VoxelVisualizer:
         from scipy.signal import argrelmax
         maxima = argrelmax(ydata)
         # plot NCC
-        import matplotlib.pyplot as plt
         plt.figure()
         plt.suptitle("NCC curve (i=%d, j=%d)" % (cam_i, cam_j))
         plt.axis([np.min(xdata), np.max(xdata), -1.1, 1.1])
