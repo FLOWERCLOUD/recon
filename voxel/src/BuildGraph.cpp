@@ -205,9 +205,9 @@ void build_graph(VoxelGraph& graph,
     x_edges.resize(model.morton_length);
     y_edges.resize(model.morton_length);
     z_edges.resize(model.morton_length);
-    std::fill(x_edges.begin(), x_edges.end(), 0.0);
-    std::fill(y_edges.begin(), y_edges.end(), 0.0);
-    std::fill(z_edges.begin(), z_edges.end(), 0.0);
+    std::fill(x_edges.begin(), x_edges.end(), 0.0f);
+    std::fill(y_edges.begin(), y_edges.end(), 0.0f);
+    std::fill(z_edges.begin(), z_edges.end(), 0.0f);
 
     PhotoConsistency pc(model, cameras);
     for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
@@ -219,27 +219,27 @@ void build_graph(VoxelGraph& graph,
       //printf("current voxel = %d %d %d\n", x, y, z);
 
       if (x > 0) {
-        if (graph.is_foreground(m) || graph.is_foreground(x-1,y,z)) {
-          double v = pc.total_votes((Point3)copy_x(center, minpos));
-          x_edges[morton_encode(x-1,y,z)] = v;
-        } else {
-          x_edges[morton_encode(x-1,y,z)] = INFINITY;
+        uint64_t m2 = morton_encode(x-1,y,z);
+        if (graph.is_foreground(m) || graph.is_foreground(m2)) {
+          Point3 midpoint = (Point3)copy_x(center, minpos);
+          double v = pc.total_votes(midpoint);
+          x_edges[m2] = v;
         }
       }
       if (y > 0) {
-        if (graph.is_foreground(m) || graph.is_foreground(x,y-1,z)) {
-          double v = pc.total_votes((Point3)copy_y(center, minpos));
-          y_edges[morton_encode(x,y-1,z)] = v;
-        } else {
-          x_edges[morton_encode(x,y-1,z)] = INFINITY;
+        uint64_t m2 = morton_encode(x,y-1,z);
+        if (graph.is_foreground(m) || graph.is_foreground(m2)) {
+          Point3 midpoint = (Point3)copy_y(center, minpos);
+          double v = pc.total_votes(midpoint);
+          y_edges[m2] = v;
         }
       }
       if (z > 0) {
-        if (graph.is_foreground(m) || graph.is_foreground(x,y,z-1)) {
-          double v = pc.total_votes((Point3)copy_z(center, minpos));
-          z_edges[morton_encode(x,y,z-1)] = v;
-        } else {
-          x_edges[morton_encode(x,y,z-1)] = INFINITY;
+        uint64_t m2 = morton_encode(x,y,z-1);
+        if (graph.is_foreground(m) || graph.is_foreground(m2)) {
+          Point3 midpoint = (Point3)copy_z(center, minpos);
+          double v = pc.total_votes(midpoint);
+          z_edges[m2] = v;
         }
       }
     }

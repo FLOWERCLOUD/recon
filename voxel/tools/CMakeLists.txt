@@ -8,3 +8,6 @@ target_link_libraries(build-graph recon-voxel)
 
 add_executable(optimize-graph optimize.cpp)
 target_link_libraries(optimize-graph recon-voxel)
+
+add_executable(vishull vishull.cpp)
+target_link_libraries(vishull recon-voxel)

@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("graph", "Input graph file");
-  parser.addPositionalArgument("output", "Output PLY file");
+  parser.addPositionalArgument("output", "Output voxel list file");
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();
@@ -30,12 +30,14 @@ int main(int argc, char* argv[])
   }
 
   const QString graphPath = args.at(0);
-  const QString optimizePath = args.at(1);
+  const QString outputPath = args.at(1);
 
-  //recon::VoxelModel model(5, loader.model_boundingbox());
   recon::VoxelGraph graph;
+  // TODO: load graph from file
+
   recon::VoxelList vlist = graph_cut(graph);
-  //recon::save_ply("voxels.ply", model, vlist);
+  recon::VoxelModel model(graph.level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
+  recon::save_ply(outputPath, model, vlist);
 
   return 0;
 }
