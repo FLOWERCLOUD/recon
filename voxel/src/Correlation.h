@@ -63,13 +63,6 @@ struct SampleWindow {
     }
   }
 
-  static inline float bilinear(float fx, float fy, float v00, float v10, float v01, float v11)
-  {
-    float v_0 = (1.0f - fx) * v00 + fx * v10;
-    float v_1 = (1.0f - fx) * v01 + fx * v11;
-    return (1.0f - fy) * v_0 + fy * v_1;
-  }
-
   inline void set_bilinear_rgb32(const QImage& image, Vec3 xy)
   {
     Q_ASSERT(image.format() == QImage::Format_RGB32);
@@ -81,29 +74,32 @@ struct SampleWindow {
     float fy = modff((float)xy.y(), &iy);
 
     int px = (int)ix, py = (int)iy;
-    if (px >= 0 && py >= 0 && px < width && py < height) {
-      for (int i = 0; i < 11; ++i) {
-        int y0 = py - 5 + i, y1 = py - 4 + i;
-        y0 = std::min(std::max(y0, 0), height-1);
-        y1 = std::min(std::max(y1, 0), height-1);
-        const QRgb* row0 = (const QRgb*)image.constScanLine(y0);
-        const QRgb* row1 = (const QRgb*)image.constScanLine(y1);
 
-        for (int j = 0; j < 11; ++j) {
-          int x0 = px - 5 + j, x1 = px - 4 + j;
-          x0 = std::min(std::max(x0, 0), width-1);
-          x1 = std::min(std::max(x1, 0), width-1);
-          QRgb c0 = row0[x0];
-          QRgb c1 = row0[x1];
-          QRgb c2 = row1[x0];
-          QRgb c3 = row1[x1];
-          float cr = bilinear(fx, fy, qRed(c0), qRed(c1), qRed(c2), qRed(c3));
-          float cg = bilinear(fx, fy, qGreen(c0), qGreen(c1), qGreen(c2), qGreen(c3));
-          float cb = bilinear(fx, fy, qBlue(c0), qBlue(c1), qBlue(c2), qBlue(c3));
-          color[i*11+j] = Vec3(cr, cg, cb);
-        }
+    if (__builtin_expect(!(px >= 0 && py >= 0 && px < width && py < height), 0))
+      return;
+    valid = true;
+
+    for (int i = 0; i < 11; ++i) {
+      int y0 = py - 5 + i, y1 = py - 4 + i;
+      y0 = std::min(std::max(y0, 0), height-1);
+      y1 = std::min(std::max(y1, 0), height-1);
+      const QRgb* row0 = (const QRgb*)image.constScanLine(y0);
+      const QRgb* row1 = (const QRgb*)image.constScanLine(y1);
+
+      for (int j = 0; j < 11; ++j) {
+        int x0 = px - 5 + j, x1 = px - 4 + j;
+        x0 = std::min(std::max(x0, 0), width-1);
+        x1 = std::min(std::max(x1, 0), width-1);
+        QRgb c0 = row0[x0];
+        QRgb c1 = row0[x1];
+        QRgb c2 = row1[x0];
+        QRgb c3 = row1[x1];
+        Vec3 v0 = Vec3(qRed(c0), qGreen(c0), qBlue(c0));
+        Vec3 v1 = Vec3(qRed(c1), qGreen(c1), qBlue(c1));
+        Vec3 v2 = Vec3(qRed(c2), qGreen(c2), qBlue(c2));
+        Vec3 v3 = Vec3(qRed(c3), qGreen(c3), qBlue(c3));
+        color[i*11+j] = lerp(fy, lerp(fx, v0, v1), lerp(fx, v2, v3));
       }
-      valid = true;
     }
   }
 };

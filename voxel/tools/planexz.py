@@ -10,5 +10,8 @@ def mainfunc():
     global ARGS
     ARGS = parse_args()
 
+    import cv2, numpy as np, matplotlib.pyplot as plt
+    
+
 if __name__ == "__main__":
     mainfunc()

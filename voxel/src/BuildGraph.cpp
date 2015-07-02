@@ -37,7 +37,7 @@ struct PhotoConsistency {
   {
   }
 
-  QImage image(int cam_id)
+  const QImage& image(int cam_id)
   {
     if (images[cam_id].isNull()) {
       images[cam_id] = QImage(cameras[cam_id].imagePath());
@@ -55,8 +55,7 @@ struct PhotoConsistency {
     SampleWindow sw_i;
 
     VoxelScore(PhotoConsistency* pc, int cam_i, Point3 x)
-    : image_js()
-    , txfm_js()
+    : num_j(0)
     , o()
     , sw_i()
     {
@@ -119,6 +118,11 @@ struct PhotoConsistency {
       }
       return sum / (double)nj;
     }
+
+    inline bool valid() const
+    {
+      return sw_i.valid;
+    }
   };
 
   double vote(int cam_i, Point3 pos)
@@ -144,8 +148,11 @@ struct PhotoConsistency {
     };
     static const int dsamples = sizeof(drange) / sizeof(float);
 
-    double c[dsamples];
     VoxelScore score(this, cam_i, pos);
+    //if (!score.valid())
+    //  return 0.0;
+
+    double c[dsamples];
     for (int k = 0; k < dsamples; ++k) {
       float d = drange[k];
       c[k] = score(d);

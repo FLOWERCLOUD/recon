@@ -17,8 +17,8 @@ target_compile_options(recon-voxel
   PUBLIC
   -msse4.1
   -mavx
-  $<$<NOT:$<CONFIG:Debug>>:-O2>
-  $<$<CONFIG:Debug>:-g>
+  $<$<NOT:$<CONFIG:Debug>>:-Ofast>
+  $<$<CONFIG:Debug>:-Og -g>
 )
 target_include_directories(recon-voxel
   PUBLIC
