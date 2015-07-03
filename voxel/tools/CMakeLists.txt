@@ -19,4 +19,11 @@ if(OpenCV_FOUND)
 
   add_executable(ncc_test ncc_test.cpp)
   target_link_libraries(ncc_test recon-voxel ${OpenCV_LIBS})
+
+  add_executable(score_test score_test.cpp)
+  target_link_libraries(score_test recon-voxel ${OpenCV_LIBS})
+  target_include_directories(score_test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/recon
+  )
 endif()

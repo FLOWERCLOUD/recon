@@ -52,7 +52,7 @@ struct Epipolar {
     return copysignf(depth, dp);
   }
 
-  template<typename F>
+  template<bool fixed_inside = false, typename F>
   void walk(F f) const
   {
     Vec3 p0 = Vec3::proj(transform(txfm, ray[-1.0f]));
@@ -74,8 +74,10 @@ struct Epipolar {
       auto invoke = [m,b,f,x0,x1,this](float x)
       {
         bool inside = (x0 <= x && x <= x1);
-        float y = m * x + b;
-        f(x, y, depth(x, y), inside);
+        if (!fixed_inside || inside) {
+          float y = m * x + b;
+          f(x, y, depth(x, y), inside);
+        }
       };
       for (int x = 0, w = width; x < w; ++x) {
         invoke((float)x);
@@ -93,8 +95,10 @@ struct Epipolar {
       auto invoke = [m,b,f,y0,y1,this](float y)
       {
         bool inside = (y0 <= y && y <= y1);
-        float x = m * y + b;
-        f(x, y, depth(x, y), inside);
+        if (!fixed_inside || inside) {
+          float x = m * y + b;
+          f(x, y, depth(x, y), inside);
+        }
       };
       for (int y = 0, h = height; y < h; ++y) {
         invoke((float)y);
