@@ -46,12 +46,12 @@ def mainfunc():
         if ARGS.output:
             plt.imsave(ARGS.output, image)
         else:
-            plt.imshow(image)
+            plt.imshow(image, interpolation='nearest')
             plt.show()
     else:
         while True:
             y = int(raw_input("y = "))
-            plt.imshow(image[:,y,:])
+            plt.imshow(image[:,y,:], interpolation='nearest')
             plt.show()
 
 if __name__ == "__main__":
