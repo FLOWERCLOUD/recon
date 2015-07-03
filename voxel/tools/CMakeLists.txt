@@ -11,3 +11,9 @@ target_link_libraries(optimize-graph recon-voxel)
 
 add_executable(vishull vishull.cpp)
 target_link_libraries(vishull recon-voxel)
+
+find_package(OpenCV 2.4)
+if(OpenCV_FOUND)
+  add_executable(proj_test proj_test.cpp)
+  target_link_libraries(proj_test recon-voxel ${OpenCV_LIBS})
+endif()

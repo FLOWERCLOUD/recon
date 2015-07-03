@@ -26,11 +26,11 @@ def run(finput):
         x, y, z = map(int, string.split(buf[0][1:-1], ','))
         rho = float(buf[1])
         if buf[2] == '+x':
-            canvas[x,y,z,0] = rho
+            canvas[y,z,x,0] = rho
         elif buf[2] == '+y':
-            canvas[x,y,z,1] = rho
+            canvas[y,z,x,1] = rho
         elif buf[2] == '+z':
-            canvas[x,y,z,2] = rho
+            canvas[y,z,x,2] = rho
     return canvas
 
 def mainfunc():
@@ -42,16 +42,22 @@ def mainfunc():
     #image = np.minimum(np.maximum(image, 0.0), 1.0)
     image = np.multiply(image, 255, dtype=np.uint8)
     if ARGS.plane_y:
-        image = image[:,ARGS.plane_y,:]
+        image = image[ARGS.plane_y]
         if ARGS.output:
             plt.imsave(ARGS.output, image)
         else:
+            plt.axis([0,image.shape[1],0,image.shape[0]])
             plt.imshow(image, interpolation='nearest')
             plt.show()
     else:
         while True:
             y = int(raw_input("y = "))
-            plt.imshow(image[:,y,:], interpolation='nearest')
+            img = image[y]
+            plt.axis([0,img.shape[1],0,img.shape[0]])
+            plt.suptitle("Voxel Y = %d" % y)
+            plt.xlabel("Voxel X")
+            plt.ylabel("Voxel Z")
+            plt.imshow(img, interpolation='nearest')
             plt.show()
 
 if __name__ == "__main__":

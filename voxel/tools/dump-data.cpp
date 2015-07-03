@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
           QJsonArray { QJsonValue((float)mat.column0().w()),
                        QJsonValue((float)mat.column1().w()),
                        QJsonValue((float)mat.column2().w()),
-                       QJsonValue((float)mat.column2().w()) }
+                       QJsonValue((float)mat.column3().w()) }
         };
         c.insert("extrinsic", jmat);
       }
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
           QJsonArray { QJsonValue((float)mat.column0().w()),
                        QJsonValue((float)mat.column1().w()),
                        QJsonValue((float)mat.column2().w()),
-                       QJsonValue((float)mat.column2().w()) }
+                       QJsonValue((float)mat.column3().w()) }
         };
         c.insert("intrinsic", jmat);
       }

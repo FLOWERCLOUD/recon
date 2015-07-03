@@ -2,9 +2,9 @@ def parse_args():
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Analysis NCC curve")
     parser.add_argument('data', help='Input JSON data file')
-    parser.add_argument('--voxel-x', type=int)
-    parser.add_argument('--voxel-y', type=int)
-    parser.add_argument('--voxel-z', type=int)
+    parser.add_argument('--voxel-x', type=float)
+    parser.add_argument('--voxel-y', type=float)
+    parser.add_argument('--voxel-z', type=float)
     parser.add_argument('--cam-i', type=int)
     parser.add_argument('--cam-j', type=int)
     return parser.parse_args()
@@ -47,6 +47,11 @@ def gauss(x, sigma=1.0):
     a = 0.3989422804014327 / sigma
     return np.multiply(np.exp(np.negative(xb)), a)
 
+def perspective_transform(mat, x):
+    import numpy as np
+    nx = np.dot(mat, [x[0], x[1], x[2], 1.0])
+    return np.divide(nx[0:2], nx[3])
+
 class VoxelVisualizer:
     def __init__(self, cameras, model, x, y, z):
         import numpy as np
@@ -71,28 +76,39 @@ class VoxelVisualizer:
         image_i = plt.imread(cameras[cam_i]['image_path'])
         image_j = plt.imread(cameras[cam_j]['image_path'])
         # compute direction from voxel
-        voxel_dir = np.subtract(cameras[cam_i]['center'], voxel_pos)
+        cam_i_pos = cameras[cam_i]['center']
+        voxel_dir = np.subtract(cam_i_pos, voxel_pos)
         voxel_dir = normalize(voxel_dir)
         voxel_dir = np.multiply(voxel_dir, voxel_size * 0.5)
         # project the voxel into the two images
         tfm_i = np.dot(cameras[cam_i]['intrinsic'], cameras[cam_i]['extrinsic'])
         tfm_j = np.dot(cameras[cam_j]['intrinsic'], cameras[cam_j]['extrinsic'])
-        vpos_i = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_i)[0,0]
-        vpos_j0 = cv2.perspectiveTransform(np.array([[np.subtract(voxel_pos, voxel_dir)]]), tfm_j)[0,0]
-        vpos_j1 = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_j)[0,0]
-        vpos_j2 = cv2.perspectiveTransform(np.array([[np.add(voxel_pos, voxel_dir)]]), tfm_j)[0,0]
+        vpos_i = perspective_transform(tfm_i, voxel_pos)
+        vpos_j0 = perspective_transform(tfm_j, np.subtract(voxel_pos, voxel_dir))
+        vpos_j1 = perspective_transform(tfm_j, voxel_pos)
+        vpos_j2 = perspective_transform(tfm_j, cam_i_pos)
+        print("tfm_i = %s" % tfm_i)
+        print("tfm_j = %s" % tfm_j)
+        print("cam_i pos = %s" % cam_i_pos)
+        print("cam_j=%d, %s %s" % (cam_j, vpos_j1, vpos_j2))
+        #vpos_i = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_i)[0,0]
+        #vpos_j0 = cv2.perspectiveTransform(np.array([[np.subtract(voxel_pos, voxel_dir)]]), tfm_j)[0,0]
+        #vpos_j1 = cv2.perspectiveTransform(np.array([[voxel_pos]]), tfm_j)[0,0]
+        #vpos_j2 = cv2.perspectiveTransform(np.array([[cam_i_pos]]), tfm_j)[0,0]
         # draw epipolar lines
         plt.figure()
         plt.suptitle("Camera i = %d" % cam_i)
-        canvas = np.copy(image_i)
-        cv2.circle(canvas, tuple(vpos_i[0:2].astype(int)), 5, (255,0,0), 3)
-        plt.imshow(canvas)
+        plt.axis([0,image_i.shape[1],image_i.shape[0],0])
+        plt.imshow(image_i)
+        plt.plot(vpos_i[0], vpos_i[1], '.')
         plt.figure()
         plt.suptitle("Camera j = %d" % cam_j)
-        canvas = np.copy(image_j)
-        cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (255,0,0), 1)
-        cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
-        plt.imshow(canvas)
+        plt.axis([0,image_j.shape[1],image_j.shape[0],0])
+        plt.imshow(image_j)
+        plt.plot(vpos_j1[0], vpos_j1[1], '.')
+        plt.plot([vpos_j0[0], vpos_j2[0]], [vpos_j0[1], vpos_j2[1]], '-')
+        #cv2.circle(canvas, tuple(vpos_j1[0:2].astype(int)), 5, (0,0,255), 3)
+        #cv2.line(canvas, tuple(vpos_j0[0:2].astype(int)), tuple(vpos_j2[0:2].astype(int)), (0,255,255), 2)
         # compute NCC
         xdata = np.arange(-5.0, 5.0, 0.01)
         ydata = np.array(map(gen_ncc_func(image_i, image_j, tfm_i, tfm_j, voxel_pos, voxel_dir), xdata))
@@ -251,6 +267,9 @@ def mainfunc():
         model['height'] = rootobj['model']['height']
         model['depth'] = rootobj['model']['depth']
         model['bbox'] = np.array(rootobj['model']['virtual_box'])
+
+    print(cameras[ARGS.cam_i]['extrinsic'])
+    print(cameras[ARGS.cam_i]['intrinsic'])
 
     visualizer = VoxelVisualizer(cameras, model, ARGS.voxel_x, ARGS.voxel_y, ARGS.voxel_z)
     print("voxel_size = %f" % visualizer.voxel_size)
