@@ -2,7 +2,6 @@ def parse_args():
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Visualize Plane XZ of Graph")
     parser.add_argument('graph', help='Input Graph data file')
-    parser.add_argument('--output', help='Output Image file')
     parser.add_argument('--plane-y', type=int)
     return parser.parse_args()
 
@@ -38,27 +37,53 @@ def mainfunc():
     ARGS = parse_args()
     with open(ARGS.graph, "r") as finput:
         image = run(finput)
-    import numpy as np, matplotlib.pyplot as plt
-    #image = np.minimum(np.maximum(image, 0.0), 1.0)
-    image = np.multiply(image, 255, dtype=np.uint8)
+    import numpy as np
+    #image = np.multiply(image, 255, dtype=np.uint8)
+    def plot(y):
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        img = image[y]
+        plt.figure()
+        plt.axis([0,img.shape[1],0,img.shape[0]])
+        plt.suptitle("Voxel Y = %d" % y)
+        plt.xlabel("Voxel X")
+        plt.ylabel("Voxel Z")
+        plt.imshow(img, interpolation='nearest')
+
+        X = np.arange(0, img.shape[1], 1)
+        Y = np.arange(0, img.shape[0], 1)
+        X, Y = np.meshgrid(X, Y)
+
+        fig = plt.figure()
+        plt.suptitle("+x edge")
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(X, Y, img[:,:,0], rstride=1, cstride=1)
+
+        fig = plt.figure()
+        plt.suptitle("+y edge")
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(X, Y, img[:,:,1], rstride=1, cstride=1)
+
+        fig = plt.figure()
+        plt.suptitle("+z edge")
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(X, Y, img[:,:,2], rstride=1, cstride=1)
+
+        fig = plt.figure()
+        plt.suptitle("magtitude")
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(X, Y, np.sqrt(np.square(img[:,:,0]) + np.square(img[:,:,1]) + np.square(img[:,:,2])), rstride=1, cstride=1)
+
+        plt.show()
+
     if ARGS.plane_y:
-        image = image[ARGS.plane_y]
-        if ARGS.output:
-            plt.imsave(ARGS.output, image)
-        else:
-            plt.axis([0,image.shape[1],0,image.shape[0]])
-            plt.imshow(image, interpolation='nearest')
-            plt.show()
+        plot(ARGS.plane_y)
     else:
         while True:
             y = int(raw_input("y = "))
-            img = image[y]
-            plt.axis([0,img.shape[1],0,img.shape[0]])
-            plt.suptitle("Voxel Y = %d" % y)
-            plt.xlabel("Voxel X")
-            plt.ylabel("Voxel Z")
-            plt.imshow(img, interpolation='nearest')
-            plt.show()
+            plot(y)
+
+
 
 if __name__ == "__main__":
     mainfunc()

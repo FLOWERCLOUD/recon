@@ -25,8 +25,8 @@ struct SampleWindow {
   SampleWindow(const QImage& image, Vec3 xy)
   : SampleWindow()
   {
-    set_bilinear_rgb32(image, xy);
-    //set_bilinear(image, xy);
+    //set_bilinear_rgb32(image, xy);
+    set_bilinear(image, xy);
     //set_floor(image, xy);
 
     // normalize pixel value to 0.0 - 1.0
@@ -60,6 +60,54 @@ struct SampleWindow {
         QRgb c = image.pixel(x, y);
         color[i*11+j] = Vec3((float)qRed(c), (float)qGreen(c), (float)qBlue(c));
       }
+    }
+  }
+
+  static inline float bilinear(float fx, float fy, float v00, float v10, float v01, float v11)
+  {
+    float v_0 = (1.0f - fx) * v00 + fx * v10;
+    float v_1 = (1.0f - fx) * v01 + fx * v11;
+    return (1.0f - fy) * v_0 + fy * v_1;
+  }
+
+  inline void set_bilinear(const QImage& image, Vec3 xy)
+  {
+    int width = image.width(), height = image.height();
+
+    float ix, iy;
+    float fx = modff((float)xy.x(), &ix);
+    float fy = modff((float)xy.y(), &iy);
+
+    int px = (int)ix, py = (int)iy;
+    if (px >= 0 && py >= 0 && px < width && py < height) {
+      uint8_t r[12][12];
+      uint8_t g[12][12];
+      uint8_t b[12][12];
+
+      for (int i = 0; i < 12; ++i) {
+        for (int j = 0; j < 12; ++j) {
+          int x = px - 5 + j, y = py - 5 + i;
+          x = (x < 0 ? 0 : x);
+          x = (x < width ? x : width-1);
+          y = (y < 0 ? 0 : y);
+          y = (y < height ? y : height-1);
+          QRgb c = image.pixel(x, y);
+          r[i][j] = qRed(c);
+          g[i][j] = qGreen(c);
+          b[i][j] = qBlue(c);
+        }
+      }
+
+      for (int i = 0; i < 11; ++i) {
+        for (int j = 0; j < 11; ++j) {
+          int index = i*11+j;
+          float cr = bilinear(fx, fy, r[i][j], r[i][j+1], r[i+1][j], r[i+1][j+1]);
+          float cg = bilinear(fx, fy, g[i][j], g[i][j+1], g[i+1][j], g[i+1][j+1]);
+          float cb = bilinear(fx, fy, b[i][j], b[i][j+1], b[i+1][j], b[i+1][j+1]);
+          color[index] = Vec3(cr, cg, cb);
+        }
+      }
+      valid = true;
     }
   }
 
@@ -144,8 +192,8 @@ struct NormalizedCrossCorrelation {
       si += di * di;
       sj += dj * dj;
     }
-    if (si == 0.000001f || sj == 0.000001f)
-      return -1.0f;
+    //if (si == 0.000001f || sj == 0.000001f)
+    //  return -1.0f;
     //si = sqrtf(si);
     //sj = sqrtf(sj);
     float denom = sqrtf(si * sj);
@@ -159,58 +207,10 @@ struct NormalizedCrossCorrelation {
       ncc += di * dj / denom;
     }
 
-    //if (isnan(ncc))
-    //  return -1.0f;
+    if (isnan(ncc))
+      return -1.0f;
     return ncc;
   }
-
-  /*static float zncc_sse(const SampleWindow& wi, const SampleWindow& wj)
-  {
-    // convert RGB to GRAY
-    __m128 yi[121], yj[121];
-    for (int i = 0; i < 121; ++i)
-      yi[i] = dot(RGB_TO_GRAY, wi[i]).xmm_data;
-    for (int i = 0; i < 121; ++i)
-      yj[i] = dot(RGB_TO_GRAY, wj[i]).xmm_data;
-
-    // compute mean
-    __m128 ai = _mm_setzero_ps(), aj = _mm_setzero_ps();
-    for (int i = 0; i < 121; ++i)
-      ai = _mm_add_ss(ai, yi[i]);
-    for (int i = 0; i < 121; ++i)
-      ai = _mm_add_ss(ai, yi[i]);
-    __m128 denom = _mm_set_ss(121.0f);
-    ai = _mm_div_ss(ai, denom);
-    aj = _mm_div_ss(aj, denom);
-
-    // compute variance
-    __m128 si = _mm_setzero_ps(), sj = _mm_setzero_ps();
-    for (int i = 0; i < 121; ++i) {
-      __m128 d = _mm_sub_ss(yi[i], ai);
-      si = _mm_add_ss(_mm_mul_ss(d, d), si);
-    }
-    for (int i = 0; i < 121; ++i) {
-      __m128 d = _mm_sub_ss(yj[i], aj);
-      sj = _mm_add_ss(_mm_mul_ss(d, d), sj);
-    }
-    si = _mm_sqrt_ss(si);
-    sj = _mm_sqrt_ss(sj);
-
-    // compute dot product of two normalized vector
-    __m128 ncc = _mm_setzero_ps();
-    for (int i = 0; i < 121; ++i) {
-      __m128 di = _mm_sub_ss(yi[i], ai);
-      __m128 dj = _mm_sub_ss(yj[i], aj);
-      di = _mm_div_ss(di, si);
-      dj = _mm_div_ss(dj, sj);
-      ncc = _mm_add_ss(_mm_mul_ps(di, dj), ncc);
-    }
-
-    float result = _mm_cvtss_f32(ncc);
-    if (isnan(result))
-      return -1.0f;
-    return result;
-  }*/
 
   inline operator float() const
   {
