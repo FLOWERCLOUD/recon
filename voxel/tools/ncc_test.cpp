@@ -1,7 +1,7 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
-//#include <recon/Correlation.h>
 #include "../src/Correlation.h"
+#include "../src/Epipolar.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -20,10 +20,14 @@ using recon::Vec3;
 using recon::Vec4;
 using recon::Point3;
 using recon::Mat4;
+using recon::Ray3;
 using recon::AABox;
 using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
+using recon::SampleWindow;
+using NCC = recon::NormalizedCrossCorrelation;
+using recon::Epipolar;
 
 static inline cv::Point to_cvPoint(Vec3 v)
 {
@@ -41,6 +45,7 @@ int main(int argc, char** argv)
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
+  parser.addPositionalArgument("ncc_data", "Compute NCC data file");
 
   QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
   optLevel.setDefaultValue("7");
@@ -91,23 +96,62 @@ int main(int argc, char** argv)
   txfm_j = txfm_j * cameras[cam_j].extrinsic();
 
   // Transform Points
+  float voxel_h = (float)model.virtual_box.extent().x() / model.width;
   Point3 voxel_pos = model.virtual_box.lerp(voxel_x/(model.width),
                                             voxel_y/(model.height),
                                             voxel_z/(model.depth));
+  Vec3 voxel_dir = normalize(cameras[cam_i].center() - voxel_pos) * 1.4f * voxel_h;
   Vec3 vpos_i = Vec3::proj(transform(txfm_i, voxel_pos));
-  Vec3 vpos_j = Vec3::proj(transform(txfm_j, voxel_pos));
+  //Vec3 vpos_j = Vec3::proj(transform(txfm_j, voxel_pos));
+
+  // Render Epipolar Line
+  Ray3 r = Ray3(voxel_pos, voxel_dir);
+  Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, r);
+
+  epipolar.walk(
+    [&img_j](float x, float y, float depth, bool inside){
+      int px = roundf(x), py = roundf(y);
+      if (px >= 0 && py >= 0 && px < img_j.cols && py < img_j.rows) {
+        if (fabsf(depth) <= 1.0f)
+          img_j.at<cv::Vec3b>(py, px) =  cv::Vec3b(0, 0, 255);
+        else
+          img_j.at<cv::Vec3b>(py, px) =  cv::Vec3b(0, 255, 0);
+      }
+    }
+  );
 
   // Render Voxel Point
   cv::circle(img_i, to_cvPoint(vpos_i), 10, cv::Scalar(0,255,255), 5);
-  cv::circle(img_j, to_cvPoint(vpos_j), 10, cv::Scalar(0,255,255), 5);
+  //cv::circle(img_j, to_cvPoint(vpos_j), 10, cv::Scalar(0,255,255), 2);
 
   cv::namedWindow("Image I", cv::WINDOW_NORMAL);
   cv::namedWindow("Image J", cv::WINDOW_NORMAL);
-  cv::namedWindow("Sample I", cv::WINDOW_NORMAL);
-  cv::namedWindow("Sample J", cv::WINDOW_NORMAL);
   cv::imshow("Image I", img_i);
   cv::imshow("Image J", img_j);
 
-  while (cv::waitKey(0) != 27);
+  // Compute NCC Curve
+  if (args.count() > 1) {
+    QFile file(args.at(1));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+      QTextStream stream(&file);
+      stream.setRealNumberNotation(QTextStream::ScientificNotation);
+      stream.setRealNumberPrecision(15);
+      auto sw_i = SampleWindow(QImage(cameras[cam_i].imagePath()), vpos_i);
+      QImage qimg_j = QImage(cameras[cam_j].imagePath());
+
+      epipolar.walk(
+        [&qimg_j,&stream,&sw_i](float x, float y, float d, bool inside){
+          auto sw_j = SampleWindow(qimg_j, Vec3(x,y,0.0));
+          stream << d << " " << (float)NCC(sw_i, sw_j) << "\n";
+        }
+      );
+    }
+  }
+
+  while (true) {
+    int key = cv::waitKey(0);
+    if (key == 27 || key == -1)
+      break;
+  }
   return 0;
 }

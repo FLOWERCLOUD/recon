@@ -145,6 +145,10 @@ int main(int argc, char** argv)
   cv::imshow("Image I", img_i);
   cv::imshow("Image J", img_j);
 
-  while (cv::waitKey(0) != 27);
+  while (true) {
+    int key = cv::waitKey(0);
+    if (key == 27 || key == -1)
+      break;
+  }
   return 0;
 }
