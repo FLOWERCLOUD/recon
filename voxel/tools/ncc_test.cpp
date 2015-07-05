@@ -9,6 +9,7 @@
 #include <QString>
 #include <QtDebug>
 #include <QFile>
+#include <QProcess>
 #include <QTextStream>
 #include <stdlib.h>
 #include <iostream>
@@ -45,7 +46,6 @@ int main(int argc, char** argv)
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
-  parser.addPositionalArgument("ncc_data", "Compute NCC data file");
 
   QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
   optLevel.setDefaultValue("7");
@@ -107,7 +107,6 @@ int main(int argc, char** argv)
   // Render Epipolar Line
   Ray3 r = Ray3(voxel_pos, voxel_dir);
   Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, r);
-
   epipolar.walk(
     [&img_j](float x, float y, float depth, bool inside){
       int px = roundf(x), py = roundf(y);
@@ -129,29 +128,45 @@ int main(int argc, char** argv)
   cv::imshow("Image I", img_i);
   cv::imshow("Image J", img_j);
 
-  // Compute NCC Curve
-  if (args.count() > 1) {
-    QFile file(args.at(1));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-      QTextStream stream(&file);
-      stream.setRealNumberNotation(QTextStream::ScientificNotation);
-      stream.setRealNumberPrecision(15);
-      auto sw_i = SampleWindow(QImage(cameras[cam_i].imagePath()), vpos_i);
-      QImage qimg_j = QImage(cameras[cam_j].imagePath());
+  // Visualize NCC Curve
+  QProcess proc;
+  proc.setProcessChannelMode(QProcess::ForwardedChannels);
+  proc.start("python2.7");
+  if (proc.waitForStarted()) {
+    QTextStream stream(&proc);
+    stream.setRealNumberNotation(QTextStream::ScientificNotation);
+    stream.setRealNumberPrecision(15);
+    stream << "import numpy as np, matplotlib.pyplot as plt\n"
+           << "data = np.array([\n";
+    auto sw_i = SampleWindow(QImage(cameras[cam_i].imagePath()), vpos_i);
+    QImage qimg_j = QImage(cameras[cam_j].imagePath());
+    epipolar.walk(
+      [&qimg_j,&stream,&sw_i](float x, float y, float d, bool inside){
+        auto sw_j = SampleWindow(qimg_j, Vec3(x,y,0.0));
+        stream << "[float(\"" << d
+               << "\"), float(\"" << (float)NCC(sw_i, sw_j)
+               << "\")],\n";
+      }
+    );
+    stream << "])\n"
+           << "plt.figure()\n"
+           << "plt.ylim(-1.0, 1.0)\n"
+           << "plt.plot(data[:,0], data[:,1])\n"
+           << "plt.figure()\n"
+           << "plt.ylim(-1.0, 1.0)\n"
+           << "sel = np.abs(data[:,0]) < 2.0\n"
+           << "plt.plot(data[sel][:,0], data[sel][:,1])\n"
+           << "plt.show()\n";
+    stream.flush();
+    proc.closeWriteChannel();
 
-      epipolar.walk(
-        [&qimg_j,&stream,&sw_i](float x, float y, float d, bool inside){
-          auto sw_j = SampleWindow(qimg_j, Vec3(x,y,0.0));
-          stream << d << " " << (float)NCC(sw_i, sw_j) << "\n";
-        }
-      );
+    // OpenCV event loop
+    while (true) {
+      int key = cv::waitKey(0);
+      if (key == 27 || key == -1)
+        break;
     }
-  }
-
-  while (true) {
-    int key = cv::waitKey(0);
-    if (key == 27 || key == -1)
-      break;
+    proc.waitForFinished();
   }
   return 0;
 }

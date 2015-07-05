@@ -9,6 +9,7 @@
 #include <QtDebug>
 #include <QFile>
 #include <QTextStream>
+#include <QProcess>
 #include <stdlib.h>
 #include <iostream>
 #include <opencv2/core/core.hpp>
@@ -36,7 +37,6 @@ int main(int argc, char** argv)
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
-  parser.addPositionalArgument("score_data", "Compute Store data file");
 
   QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
   optLevel.setDefaultValue("7");
@@ -123,30 +123,47 @@ int main(int argc, char** argv)
     cv::imshow(cam_j_name, img_j);
   }
 
-  // Compute Score Curve
-  if (args.count() > 1 && score.ccams.num >= 1) {
-    QFile file(args.at(1));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-      QTextStream stream(&file);
-      stream.setRealNumberNotation(QTextStream::ScientificNotation);
-      stream.setRealNumberPrecision(15);
-
-      auto epipolar = score.make_epipolar(0);
-      epipolar.walk<false>(
-        [&stream,&score](float x, float y, float d, bool inside){
-          stream << d << " " << score.compute(d) << "\n";
-        }
-      );
-    }
-  }
-
   // Print vote
   printf("vote = %f\n", score.vote());
 
-  while (true) {
-    int key = cv::waitKey(0);
-    if (key == 27 || key == -1)
-      break;
+  // Visualize Score Curve
+  if (score.ccams.num >= 1) {
+    QProcess proc;
+    proc.setProcessChannelMode(QProcess::ForwardedChannels);
+    proc.start("python2.7");
+    if (proc.waitForStarted()) {
+      QTextStream stream(&proc);
+      stream.setRealNumberNotation(QTextStream::ScientificNotation);
+      stream.setRealNumberPrecision(15);
+      stream << "import numpy as np, matplotlib.pyplot as plt\n"
+             << "data = np.array([\n";
+      auto epipolar = score.make_epipolar(0);
+      epipolar.walk<false>(
+        [&stream,&score](float x, float y, float d, bool inside){
+          stream << "[float(\"" << d
+                 << "\"), float(\"" << score.compute(d)
+                 << "\")],\n";
+        }
+      );
+      stream << "])\n"
+             << "plt.figure()\n"
+             << "plt.plot(data[:,0], data[:,1])\n"
+             << "plt.figure()\n"
+             << "sel = np.abs(data[:,0]) < 2.0\n"
+             << "plt.plot(data[sel][:,0], data[sel][:,1])\n"
+             << "plt.show()\n";
+      stream.flush();
+      proc.closeWriteChannel();
+
+      // OpenCV event loop
+      while (true) {
+        int key = cv::waitKey(0);
+        if (key == 27 || key == -1)
+          break;
+      }
+      proc.waitForFinished();
+    }
   }
+
   return 0;
 }
