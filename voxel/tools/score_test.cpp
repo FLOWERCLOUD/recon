@@ -25,11 +25,6 @@ using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
 
-static inline cv::Point to_cvPoint(Vec3 v)
-{
-  return cv::Point((float)v.x(), (float)v.y());
-}
-
 int main(int argc, char** argv)
 {
   QCoreApplication app(argc, argv);
@@ -41,6 +36,7 @@ int main(int argc, char** argv)
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("bundle", "Input bundle file");
+  parser.addPositionalArgument("score_data", "Compute Store data file");
 
   QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
   optLevel.setDefaultValue("7");
@@ -102,14 +98,15 @@ int main(int argc, char** argv)
 
   for (int i = 0, n = score.ccams.num; i < n; ++i) {
     int cam_j = score.ccams.cam_js[i];
-    Mat4 txfm_j = score.ccams.txfm_js[i];
+    //Mat4 txfm_j = score.ccams.txfm_js[i];
 
     char cam_j_name[64];
     sprintf(cam_j_name, "cam_j[%d] = %d", i, cam_j);
     printf("%s\n", cam_j_name);
 
     cv::Mat img_j = cv::imread(cameras[cam_j].imagePath().toStdString());
-    recon::Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, score.ray);
+    auto epipolar = score.make_epipolar(i);
+    //recon::Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, score.ray);
     epipolar.walk<true>(
       [&img_j](float x, float y, float depth, bool inside){
         int px = roundf(x), py = roundf(y);
@@ -125,6 +122,26 @@ int main(int argc, char** argv)
     cv::namedWindow(cam_j_name, cv::WINDOW_NORMAL);
     cv::imshow(cam_j_name, img_j);
   }
+
+  // Compute Score Curve
+  if (args.count() > 1 && score.ccams.num >= 1) {
+    QFile file(args.at(1));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+      QTextStream stream(&file);
+      stream.setRealNumberNotation(QTextStream::ScientificNotation);
+      stream.setRealNumberPrecision(15);
+
+      auto epipolar = score.make_epipolar(0);
+      epipolar.walk<false>(
+        [&stream,&score](float x, float y, float d, bool inside){
+          stream << d << " " << score.compute(d) << "\n";
+        }
+      );
+    }
+  }
+
+  // Print vote
+  printf("vote = %f\n", score.vote());
 
   while (true) {
     int key = cv::waitKey(0);

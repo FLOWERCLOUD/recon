@@ -68,7 +68,7 @@ struct VoxelScore1 {
   ClosestCameras ccams;
   SampleWindow swin_i;
   Ray3 ray;
-  QList<QPointF> sjdk;
+  QList<QPointF> sjdk; // TODO: MAX-HEAP
 
   VoxelScore1(const QList<Camera>& cams,
               const QList<QImage>& imgs,
@@ -83,17 +83,26 @@ struct VoxelScore1 {
 
     sjdk.reserve(128);
     for (int i = 0; i < ccams.num; ++i) {
-      compute(i);
+      update(i);
     }
   }
 
-  void compute(int ith_jcam)
+  Epipolar make_epipolar(int ith_jcam) const
   {
     int cam_j = ccams.cam_js[ith_jcam];
     Mat4 txfm_j = ccams.txfm_js[ith_jcam];
+
     const QImage& image_j = ccams._images->at(cam_j);
     int width = image_j.width(), height = image_j.height();
-    Epipolar epipolar(width, height, txfm_j, ray);
+
+    return Epipolar(width, height, txfm_j, ray);
+  }
+
+  void update(int ith_jcam)
+  {
+    int cam_j = ccams.cam_js[ith_jcam];
+    const QImage& image_j = ccams._images->at(cam_j);
+    auto epipolar = make_epipolar(ith_jcam);
 
     const int bufn = 5;
     float xbuf[bufn];
@@ -125,25 +134,52 @@ struct VoxelScore1 {
     );
   }
 
-  /*inline double operator()(float d) const
+  static inline double parzen_window(double x)
+  {
+    const double sigma = 1.0;
+    double a = x / sigma;
+    return exp(-0.5 * a * a);
+  }
+
+  inline double compute(float d) const
   {
     double sum = 0.0;
-    for (int i = 0, n = ccams.num; i < n; ++i) {
-      const QImage& image_j = ccams.images->at(ccams.cam_js[i]);
-      Mat4 txfm_j = ccams.txfm_js[i];
-      // Compute NCC
-      SampleWindow sw_j(image_j, Vec3::proj(transform(txfm_j, ray[d])));
-      sum += NormalizedCrossCorrelation(swin_i, sw_j);
+
+    for (QPointF ds : sjdk) {
+      double dk = ds.x();
+      double sidk = ds.y();
+      sum += sidk * parzen_window(d - dk);
     }
-    return sum / (double)ccams.num;
-  }*/
-};
+    return sum;
+  }
 
-struct VoxelVote {
-  ClosestCameras ccams;
+  inline double vote() const
+  {
+    if (ccams.num < 1)
+      return 0.0;
 
+    bool ok = true;
+    float c0 = compute(0.0);
+    auto epipolar = make_epipolar(0);
 
+    epipolar.walk<true>(
+      [&c0,this](float x, float y, float d, bool inside){
+        c0 = fmax(c0, compute(d));
+      }
+    );
+    //printf("c0 = %f\n", c0);
+    epipolar.walk<false>(
+      [c0,&ok,this](float x, float y, float d, bool inside){
+        float c = compute(d);
+        //if (c0 < c) {
+        //  printf("c(d=%f) = %f\n", d, c);
+        //}
+        ok = ok && (c0 >= c);
+      }
+    );
 
+    return (ok ? c0 : 0.0);
+  }
 };
 
 struct PhotoConsistency {
