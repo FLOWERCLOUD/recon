@@ -196,8 +196,14 @@ struct PhotoConsistency {
       images.append(QImage(cameras[i].imagePath()));
   }
 
-  double vote(int cam_i, Point3 x) const
+  double vote(Point3 x) const
   {
+    double sum = 0.0;
+    for (int i = 0, n = cameras.size(); i < n; ++i) {
+      VoxelScore1 score(cameras, images, i, x, voxel_size);
+      sum += score.vote();
+    }
+    return sum;
   }
 };
 
