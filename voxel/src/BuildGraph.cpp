@@ -116,7 +116,7 @@ struct PhotoConsistency {
         SampleWindow sw_j(image_j, Vec3::proj(transform(txfm_j, o[d])));
         sum += NormalizedCrossCorrelation(sw_i, sw_j);
       }
-      return sum / (double)nj;
+      return sum;
     }
 
     inline bool valid() const
