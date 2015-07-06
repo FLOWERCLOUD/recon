@@ -52,7 +52,58 @@ struct Epipolar {
     return copysignf(depth, dp);
   }
 
-  template<bool fixed_inside = false, typename F>
+  template<typename F>
+  void walk_dist1(F f) const
+  {
+    Vec3 p0 = Vec3::proj(transform(txfm, ray[-1.0f]));
+    Vec3 p1 = Vec3::proj(transform(txfm, ray[0.0f]));
+    Vec3 p2 = Vec3::proj(transform(txfm, ray[1.0f]));
+    p1 = copy_z(p1, Vec3::zero());
+    p2 = copy_z(p2, Vec3::zero());
+    Vec3 d = normalize(p2 - p1);
+    float dx = (float)d.x(), dy = (float)d.y();
+    float adx = fabsf(dx), ady = fabsf(dy);
+
+    if (adx >= ady) { // Along X
+      float m = (dy / dx);
+      float b = (float)p0.y() - (float)p0.x() * m;
+      float x0 = (float)p0.x(), x1 = (float)p2.x();
+      if (x0 > x1)
+        std::swap(x0, x1);
+      x0 = floorf(x0), x1 = ceilf(x1);
+      auto invoke = [m,b,f,x0,x1,this](float x)
+      {
+        float y = m * x + b;
+        f(x, y, depth(x, y));
+      };
+      for (int x = x0; x < x1; ++x) {
+        invoke((float)x);
+        invoke((float)x + 0.25f);
+        invoke((float)x + 0.5f);
+        invoke((float)x + 0.75f);
+      }
+    } else { // Along Y
+      float m = (float)(dx / dy);
+      float b = (float)p0.x() - (float)p0.y() * m;
+      float y0 = (float)p0.y(), y1 = (float)p2.y();
+      if (y0 > y1)
+        std::swap(y0, y1);
+      y0 = floorf(y0), y1 = ceilf(y1);
+      auto invoke = [m,b,f,y0,y1,this](float y)
+      {
+        float x = m * y + b;
+        f(x, y, depth(x, y));
+      };
+      for (int y = y0; y < y1; ++y) {
+        invoke((float)y);
+        invoke((float)y + 0.25f);
+        invoke((float)y + 0.5f);
+        invoke((float)y + 0.75f);
+      }
+    }
+  }
+
+  template<typename F>
   void walk(F f) const
   {
     Vec3 p0 = Vec3::proj(transform(txfm, ray[-1.0f]));
@@ -73,11 +124,9 @@ struct Epipolar {
         std::swap(x0, x1);
       auto invoke = [m,b,f,x0,x1,this](float x)
       {
-        bool inside = (x0 <= x && x <= x1);
-        if (!fixed_inside || inside) {
-          float y = m * x + b;
-          f(x, y, depth(x, y), inside);
-        }
+        //bool inside = (x0 <= x && x <= x1);
+        float y = m * x + b;
+        f(x, y, depth(x, y));
       };
       for (int x = 0, w = width; x < w; ++x) {
         invoke((float)x);
@@ -94,11 +143,9 @@ struct Epipolar {
         std::swap(y0, y1);
       auto invoke = [m,b,f,y0,y1,this](float y)
       {
-        bool inside = (y0 <= y && y <= y1);
-        if (!fixed_inside || inside) {
-          float x = m * y + b;
-          f(x, y, depth(x, y), inside);
-        }
+        //bool inside = (y0 <= y && y <= y1);
+        float x = m * y + b;
+        f(x, y, depth(x, y));
       };
       for (int y = 0, h = height; y < h; ++y) {
         invoke((float)y);

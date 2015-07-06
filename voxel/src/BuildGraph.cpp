@@ -5,7 +5,7 @@
 #include "morton_code.h"
 #include "BuildGraph.h"
 #include "VisualHull.h"
-#include "Correlation.h"
+#include "VoxelScore1.h"
 #include "PhotoConsistency.h"
 
 #include <QList>
@@ -53,7 +53,7 @@ void build_graph(VoxelGraph& graph,
     std::fill(y_edges.begin(), y_edges.end(), 0.0f);
     std::fill(z_edges.begin(), z_edges.end(), 0.0f);
 
-    PhotoConsistency pc(model, cameras);
+    PhotoConsistency<VoxelScore1> pc(model, cameras);
     for (uint64_t m = 0, n = model.morton_length; m < n; ++m) {
       uint32_t x, y, z;
       morton_decode(m, x, y, z);

@@ -1,5 +1,6 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
+#include "../src/VoxelScore1.h"
 #include "../src/PhotoConsistency.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
 
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
-  recon::PhotoConsistency pcs(model, cameras);
+  recon::PhotoConsistency<recon::VoxelScore1> pcs(model, cameras);
 
   cv::Mat img_i = cv::imread(cameras[cam_i].imagePath().toStdString());
   //Mat4 txfm_i = cameras[cam_i].intrinsicForImage(img_i.cols, img_i.rows);
@@ -107,8 +108,8 @@ int main(int argc, char** argv)
     cv::Mat img_j = cv::imread(cameras[cam_j].imagePath().toStdString());
     auto epipolar = score.make_epipolar(i);
     //recon::Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, score.ray);
-    epipolar.walk<true>(
-      [&img_j](float x, float y, float depth, bool inside){
+    epipolar.walk(
+      [&img_j](float x, float y, float depth){
         int px = roundf(x), py = roundf(y);
         if (px >= 0 && py >= 0 && px < img_j.cols && py < img_j.rows) {
           if (fabsf(depth) <= 1.0f)
@@ -138,8 +139,8 @@ int main(int argc, char** argv)
       stream << "import numpy as np, matplotlib.pyplot as plt\n"
              << "data = np.array([\n";
       auto epipolar = score.make_epipolar(0);
-      epipolar.walk<false>(
-        [&stream,&score](float x, float y, float d, bool inside){
+      epipolar.walk(
+        [&stream,&score](float x, float y, float d){
           stream << "[float(\"" << d
                  << "\"), float(\"" << score.compute(d)
                  << "\")],\n";
@@ -161,7 +162,7 @@ int main(int argc, char** argv)
         if (key == 27 || key == -1)
           break;
       }
-      proc.waitForFinished();
+      proc.waitForFinished(-1);
     }
   }
 

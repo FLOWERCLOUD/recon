@@ -108,7 +108,7 @@ int main(int argc, char** argv)
   Ray3 r = Ray3(voxel_pos, voxel_dir);
   Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, r);
   epipolar.walk(
-    [&img_j](float x, float y, float depth, bool inside){
+    [&img_j](float x, float y, float depth){
       int px = roundf(x), py = roundf(y);
       if (px >= 0 && py >= 0 && px < img_j.cols && py < img_j.rows) {
         if (fabsf(depth) <= 1.0f)
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     auto sw_i = SampleWindow(QImage(cameras[cam_i].imagePath()), vpos_i);
     QImage qimg_j = QImage(cameras[cam_j].imagePath());
     epipolar.walk(
-      [&qimg_j,&stream,&sw_i](float x, float y, float d, bool inside){
+      [&qimg_j,&stream,&sw_i](float x, float y, float d){
         auto sw_j = SampleWindow(qimg_j, Vec3(x,y,0.0));
         stream << "[float(\"" << d
                << "\"), float(\"" << (float)NCC(sw_i, sw_j)
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
       if (key == 27 || key == -1)
         break;
     }
-    proc.waitForFinished();
+    proc.waitForFinished(-1);
   }
   return 0;
 }
