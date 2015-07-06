@@ -53,11 +53,11 @@ struct Epipolar {
   }
 
   template<typename F>
-  void walk_dist1(F f) const
+  void walk_ranged(float dist, F f) const
   {
-    Vec3 p0 = Vec3::proj(transform(txfm, ray[-1.0f]));
+    Vec3 p0 = Vec3::proj(transform(txfm, ray[-dist]));
     Vec3 p1 = Vec3::proj(transform(txfm, ray[0.0f]));
-    Vec3 p2 = Vec3::proj(transform(txfm, ray[1.0f]));
+    Vec3 p2 = Vec3::proj(transform(txfm, ray[dist]));
     p1 = copy_z(p1, Vec3::zero());
     p2 = copy_z(p2, Vec3::zero());
     Vec3 d = normalize(p2 - p1);

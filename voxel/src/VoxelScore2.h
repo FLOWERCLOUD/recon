@@ -6,71 +6,18 @@
 #include "Correlation.h"
 #include <QList>
 #include <QImage>
+#include <math.h>
 
 namespace recon {
 
-struct ClosestCameras {
-  static const int MAX_NUM = 8;
-  int num;
-  int cam_i;
-  int cam_js[MAX_NUM];
-  Mat4 txfm_i;
-  Mat4 txfm_js[MAX_NUM];
-  const QList<Camera>* _cameras;
-  const QList<QImage>* _images;
-
-  ClosestCameras(const QList<Camera>& cams, const QList<QImage>& imgs, int i, Point3 x)
-  : num(0)
-  , cam_i(i)
-  , _cameras(&cams)
-  , _images(&imgs)
-  {
-    Camera ci = cams.at(i);
-    QImage img = imgs.at(i);
-    Mat4 m = ci.intrinsicForImage(img.width(), img.height());
-    txfm_i = m * ci.extrinsic();
-
-    append_cameras(x, 0.9396926207859084f, 0.984807753012208f);
-  }
-
-  bool append_cameras(Point3 x, float cos_min, float cos_max)
-  {
-    if (this->num >= MAX_NUM)
-      return false;
-
-    Camera ci = _cameras->at(cam_i);
-    Vec3 ni = normalize(ci.center() - x);
-    int count = this->num;
-
-    for (int j = 0, n = _cameras->size(); j < n; ++j) {
-      Camera cj = _cameras->at(j);
-      QImage img = _images->at(j);
-      int w = img.width(), h = img.height();
-      Vec3 nj = normalize(cj.center() - x);
-      float dp = (float)dot(ni, nj);
-
-      if (dp <= cos_max && dp >= cos_min) {
-        Mat4 txfm = cj.intrinsicForImage(w, h) * cj.extrinsic();
-        this->cam_js[count] = j;
-        this->txfm_js[count] = txfm;
-        count++;
-        if (count == MAX_NUM)
-          break;
-      }
-    }
-    this->num = count;
-    return true;
-  }
-};
-
-struct VoxelScore1 {
+struct VoxelScore2 {
   float voxel_size;
   ClosestCameras ccams;
   SampleWindow swin_i;
   Ray3 ray;
   QList<QPointF> sjdk; // TODO: MAX-HEAP
 
-  VoxelScore1(const QList<Camera>& cams,
+  VoxelScore2(const QList<Camera>& cams,
               const QList<QImage>& imgs,
               int cam_i, Point3 x, float voxel_h)
   : voxel_size(voxel_h)
@@ -79,7 +26,7 @@ struct VoxelScore1 {
     const Camera& ci = cams.at(cam_i);
     const QImage& image_i = imgs.at(cam_i);
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
-    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 1.4f);
+    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
 
     sjdk.reserve(128);
     for (int i = 0; i < ccams.num; ++i) {
@@ -108,7 +55,7 @@ struct VoxelScore1 {
     float xbuf[bufn];
     double ybuf[bufn];
     int bufi = 0;
-    epipolar.walk(
+    epipolar.walk_ranged(3.0f,
       [&xbuf,&ybuf,&bufi,&image_j,this]
       (float x, float y, float depth) {
         SampleWindow swj(image_j, Vec3(x,y,0.0f));
@@ -134,11 +81,12 @@ struct VoxelScore1 {
     );
   }
 
-  static inline double parzen_window(double x)
+  inline double parzen_window(double x) const
   {
-    const double sigma = 1.0;
-    double a = x / sigma;
-    return exp(-0.5 * a * a);
+    //const double sigma = 1.0;
+    //double a = x / sigma;
+    //return exp(-0.5 * a * a);
+    return (1.0f >= fabs(x) ? 1.0f : 0.0f);
   }
 
   inline double compute(float d) const
@@ -168,7 +116,7 @@ struct VoxelScore1 {
       }
     );
     //printf("c0 = %f\n", c0);
-    epipolar.walk(
+    epipolar.walk_ranged(3.0f,
       [c0,&ok,this](float x, float y, float d){
         float c = compute(d);
         //if (c0 < c) {
