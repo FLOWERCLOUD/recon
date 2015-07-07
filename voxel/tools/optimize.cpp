@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 
   recon::VoxelList vlist = graph_cut(graph, lambda, mju);
   recon::VoxelModel model(graph.level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
-  recon::save_ply(outputPath, model, vlist);
+  recon::save_points_ply(outputPath, model, vlist);
 
   return 0;
 }

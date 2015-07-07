@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
   vlist = trim_voxels(model, vlist);
 
   recon::VoxelModel model2(level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
-  recon::save_ply(outputPath, model2, vlist);
+  recon::save_points_ply(outputPath, model2, vlist);
 
   return 0;
 }

@@ -33,8 +33,8 @@ struct VoxelModel {
 };
 
 //VoxelList to_voxellist(const VoxelModel& model, Func func);
-void save_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist);
-void save_ply(const QString& path, const VoxelModel& model, const QList<uint32_t>& colors);
+void save_cubes_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist);
+void save_points_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist);
 
 inline AABox VoxelModel::element_box(uint64_t morton) const
 {

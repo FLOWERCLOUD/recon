@@ -33,7 +33,7 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
 #include <trimesh2/TriMesh.h>
 namespace recon {
 
-void save_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist)
+void save_cubes_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist)
 {
   uint64_t count = vlist.count();
 
@@ -90,31 +90,22 @@ void save_ply(const QString& path, const VoxelModel& model, const VoxelList& vli
   mesh.write(path.toUtf8().constData());
 }
 
-void save_ply(const QString& path, const VoxelModel& model, const QList<uint32_t>& colors)
+void save_points_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist)
 {
-  uint64_t count = 0;
-  for (uint32_t c : colors)
-    if (qAlpha(c) != 0)
-      count++;
+  uint64_t count = vlist.count();
 
   trimesh::TriMesh mesh;
   mesh.vertices.reserve(count);
-  mesh.colors.reserve(count);
 
-  for (uint64_t m = 0; m < count; ++m) {
-    uint32_t color = colors[m];
-    if (qAlpha(color) == 0)
-      continue;
-
-    Point3 pos = model.element_box(m).center();
-
-    trimesh::point pt = { (float)pos.x(), (float)pos.y(), (float)pos.z() };
-    trimesh::Color c = { qRed(color), qGreen(color), qBlue(color) };
-
+  for (uint64_t m : vlist) {
+    AABox vbox = model.element_box(m);
+    trimesh::point pt = {
+      (float)vbox.center().x(),
+      (float)vbox.center().y(),
+      (float)vbox.center().z()
+    };
     mesh.vertices.push_back(pt);
-    mesh.colors.push_back(c);
   }
-
   mesh.write(path.toUtf8().constData());
 }
 
