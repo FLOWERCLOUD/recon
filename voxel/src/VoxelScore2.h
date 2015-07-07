@@ -9,22 +9,20 @@ struct VoxelScore2 {
   ClosestCameras ccams;
   SampleWindow swin_i;
   Ray3 ray;
-  std::vector<QPointF>& sjdk; // shared
+  std::vector<QPointF> sjdk;
 
   VoxelScore2(const QList<Camera>& cams,
               const QList<QImage>& imgs,
-              int cam_i, Point3 x, float voxel_h,
-              std::vector<QPointF>& shared_sjdk)
+              int cam_i, Point3 x, float voxel_h)
   : voxel_size(voxel_h)
   , ccams(cams, imgs, cam_i, x)
-  , sjdk(shared_sjdk)
   {
     const Camera& ci = cams.at(cam_i);
     const QImage& image_i = imgs.at(cam_i);
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
     ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
 
-    sjdk.clear();
+    sjdk.reserve(32);
     for (int i = 0; i < ccams.num; ++i) {
       find_peaks(i);
     }
