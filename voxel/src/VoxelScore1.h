@@ -6,7 +6,6 @@
 #include "Correlation.h"
 #include <QList>
 #include <QImage>
-#include <vector>
 
 namespace recon {
 
@@ -69,7 +68,7 @@ struct VoxelScore1 {
   ClosestCameras ccams;
   SampleWindow swin_i;
   Ray3 ray;
-  std::vector<QPointF> sjdk;
+  QList<QPointF> sjdk;
 
   VoxelScore1(const QList<Camera>& cams,
               const QList<QImage>& imgs,
@@ -122,7 +121,7 @@ struct VoxelScore1 {
             is_maxima = is_maxima && (ybuf[(bufn/2)] >= ybuf[i]);
           }
           if (is_maxima) {
-            sjdk.emplace_back(xbuf[(bufn/2)], ybuf[(bufn/2)]);
+            sjdk.append(QPointF(xbuf[(bufn/2)], ybuf[(bufn/2)]));
           }
           memmove(xbuf, xbuf+1, sizeof(float) * (bufn-1));
           memmove(ybuf, ybuf+1, sizeof(double) * (bufn-1));
