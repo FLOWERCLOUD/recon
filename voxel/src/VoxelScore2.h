@@ -9,7 +9,7 @@ struct VoxelScore2 {
   ClosestCameras ccams;
   SampleWindow swin_i;
   Ray3 ray;
-  std::vector<QPointF>& sjdk;
+  std::vector<QPointF>& sjdk; // shared
 
   VoxelScore2(const QList<Camera>& cams,
               const QList<QImage>& imgs,
