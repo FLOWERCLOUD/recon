@@ -27,6 +27,8 @@ void build_graph(VoxelGraph& graph,
   graph.level = model.level;
   graph.width = model.width;
   graph.voxel_size = voxel_h;
+  model.virtual_box.minpos.store(graph.voxel_minpos);
+  model.virtual_box.maxpos.store(graph.voxel_maxpos);
 
   // Shape Prior (Visual Hull)
   printf("processing shape prior (visual hull)...\n");

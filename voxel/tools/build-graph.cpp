@@ -72,9 +72,16 @@ int main(int argc, char* argv[])
   stream.setRealNumberNotation(QTextStream::ScientificNotation);
   stream.setRealNumberPrecision(15);
 
-  stream << graph.level << "\n";
-  stream << graph.width << "\n";
-  stream << graph.voxel_size << "\n";
+  stream << graph.level << "\n"
+         << graph.width << "\n"
+         << graph.voxel_size << "\n"
+         << graph.voxel_minpos[0] << " "
+         << graph.voxel_minpos[1] << " "
+         << graph.voxel_minpos[2] << "\n"
+         << graph.voxel_maxpos[0] << " "
+         << graph.voxel_maxpos[1] << " "
+         << graph.voxel_maxpos[2] << "\n";
+
   for (uint64_t m = 0; m < model.morton_length; ++m) {
     uint32_t x, y, z;
     recon::morton_decode(m, x, y, z);

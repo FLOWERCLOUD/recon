@@ -37,6 +37,8 @@ struct VoxelGraph {
   uint32_t level;
   uint32_t width;
   float voxel_size;
+  float voxel_minpos[3];
+  float voxel_maxpos[3];
 
   // Every array in Morton order
   std::vector<bool> foreground;

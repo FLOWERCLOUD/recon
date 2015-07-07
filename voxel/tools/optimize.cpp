@@ -34,7 +34,13 @@ static bool load_graph(recon::VoxelGraph& graph, const QString& path)
 
   stream >> graph.level
          >> graph.width
-         >> graph.voxel_size;
+         >> graph.voxel_size
+         >> graph.voxel_minpos[0]
+         >> graph.voxel_minpos[1]
+         >> graph.voxel_minpos[2]
+         >> graph.voxel_maxpos[0]
+         >> graph.voxel_maxpos[1]
+         >> graph.voxel_maxpos[2];
 
   uint64_t length = graph.width * graph.width * graph.width;
   graph.foreground.resize(length, false);
@@ -100,7 +106,13 @@ int main(int argc, char* argv[])
   const QString graphPath = args.at(0);
   const QString outputPath = args.at(1);
 
-  recon::VoxelGraph graph;
+  using recon::Point3;
+  using recon::AABox;
+  using recon::VoxelGraph;
+  using recon::VoxelModel;
+  using recon::VoxelList;
+
+  VoxelGraph graph;
   if (!load_graph(graph, graphPath)) {
     return 1;
   }
@@ -108,8 +120,9 @@ int main(int argc, char* argv[])
   double lambda = parser.value(optLambda).toDouble();
   double mju = parser.value(optMju).toDouble();
 
-  recon::VoxelList vlist = graph_cut(graph, lambda, mju);
-  recon::VoxelModel model(graph.level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
+  VoxelList vlist = graph_cut(graph, lambda, mju);
+  VoxelModel model(graph.level, AABox(Point3::load(graph.voxel_minpos),
+                                      Point3::load(graph.voxel_maxpos)));
   recon::save_points_ply(outputPath, model, vlist);
 
   return 0;
