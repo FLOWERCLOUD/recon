@@ -95,7 +95,7 @@ int main(int argc, char** argv)
   cv::imshow("Image I", img_i);
 
   // Voxel Score
-  recon::VoxelScore1 score(pcs.cameras, pcs.images, cam_i, voxel_pos, pcs.voxel_size);
+  recon::VoxelScore1 score(pcs.cameras, pcs.images, cam_i, voxel_pos, pcs.voxel_size, pcs.shared_sjdk);
 
   for (int i = 0, n = score.ccams.num; i < n; ++i) {
     int cam_j = score.ccams.cam_js[i];

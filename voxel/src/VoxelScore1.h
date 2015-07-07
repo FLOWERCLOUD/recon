@@ -6,6 +6,7 @@
 #include "Correlation.h"
 #include <QList>
 #include <QImage>
+#include <vector>
 
 namespace recon {
 
@@ -68,20 +69,22 @@ struct VoxelScore1 {
   ClosestCameras ccams;
   SampleWindow swin_i;
   Ray3 ray;
-  QList<QPointF> sjdk; // TODO: MAX-HEAP
+  std::vector<QPointF>& sjdk;
 
   VoxelScore1(const QList<Camera>& cams,
               const QList<QImage>& imgs,
-              int cam_i, Point3 x, float voxel_h)
+              int cam_i, Point3 x, float voxel_h,
+              std::vector<QPointF>& shared_sjdk)
   : voxel_size(voxel_h)
   , ccams(cams, imgs, cam_i, x)
+  , sjdk(shared_sjdk)
   {
     const Camera& ci = cams.at(cam_i);
     const QImage& image_i = imgs.at(cam_i);
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
     ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 1.4f);
 
-    sjdk.reserve(128);
+    sjdk.clear();
     for (int i = 0; i < ccams.num; ++i) {
       find_peaks(i);
     }
@@ -121,7 +124,7 @@ struct VoxelScore1 {
             is_maxima = is_maxima && (ybuf[(bufn/2)] >= ybuf[i]);
           }
           if (is_maxima) {
-            sjdk.append(QPointF(xbuf[(bufn/2)], ybuf[(bufn/2)]));
+            sjdk.emplace_back(xbuf[(bufn/2)], ybuf[(bufn/2)]);
           }
           memmove(xbuf, xbuf+1, sizeof(float) * (bufn-1));
           memmove(ybuf, ybuf+1, sizeof(double) * (bufn-1));
