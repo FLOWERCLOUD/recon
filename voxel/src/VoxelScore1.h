@@ -6,6 +6,7 @@
 #include "Correlation.h"
 #include <QList>
 #include <QImage>
+#include <iterator>
 
 namespace recon {
 
@@ -81,7 +82,7 @@ struct VoxelScore1 {
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
     ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 1.4f);
 
-    sjdk.reserve(32);
+    sjdk.reserve(128);
     for (int i = 0; i < ccams.num; ++i) {
       find_peaks(i);
     }

@@ -78,9 +78,9 @@ struct Epipolar {
       };
       for (int x = x0; x < x1; ++x) {
         invoke((float)x);
-        invoke((float)x + 0.25f);
+        //invoke((float)x + 0.25f);
         invoke((float)x + 0.5f);
-        invoke((float)x + 0.75f);
+        //invoke((float)x + 0.75f);
       }
     } else { // Along Y
       float m = (float)(dx / dy);
@@ -96,9 +96,9 @@ struct Epipolar {
       };
       for (int y = y0; y < y1; ++y) {
         invoke((float)y);
-        invoke((float)y + 0.25f);
+        //invoke((float)y + 0.25f);
         invoke((float)y + 0.5f);
-        invoke((float)y + 0.75f);
+        //invoke((float)y + 0.75f);
       }
     }
   }

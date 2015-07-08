@@ -22,7 +22,7 @@ struct VoxelScore2 {
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
     ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
 
-    sjdk.reserve(32);
+    sjdk.reserve(128); // TODO: prediction according to epipolar line lengths and number of cameras
     for (int i = 0; i < ccams.num; ++i) {
       find_peaks(i);
     }

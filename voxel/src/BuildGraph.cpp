@@ -63,7 +63,9 @@ void build_graph(VoxelGraph& graph,
       AABox vbox = model.element_box(m);
       Vec3 center = (Vec3)vbox.center();
       Vec3 minpos = (Vec3)vbox.minpos;
-      printf("current voxel = %d %d %d\n", x, y, z);
+      //printf("current voxel = %d %d %d\n", x, y, z);
+      if (__builtin_expect(m % (model.morton_length >> 9) == 0, 0))
+        printf("current morton = 0x%llX (%.2f %%)\n", m, (float)m/(float)n*100.0f);
 
       if (x > 0) {
         uint64_t m2 = morton_encode(x-1,y,z);

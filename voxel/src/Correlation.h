@@ -25,8 +25,8 @@ struct SampleWindow {
   SampleWindow(const QImage& image, Vec3 xy)
   : SampleWindow()
   {
-    //set_bilinear_rgb32(image, xy);
-    set_bilinear(image, xy);
+    set_bilinear_rgb32(image, xy);
+    //set_bilinear(image, xy);
     //set_floor(image, xy);
 
     // normalize pixel value to 0.0 - 1.0
@@ -192,10 +192,6 @@ struct NormalizedCrossCorrelation {
       si += di * di;
       sj += dj * dj;
     }
-    //if (si == 0.000001f || sj == 0.000001f)
-    //  return -1.0f;
-    //si = sqrtf(si);
-    //sj = sqrtf(sj);
     float denom = sqrtf(si * sj);
 
     // compute dot product of two normalized vector
@@ -207,8 +203,8 @@ struct NormalizedCrossCorrelation {
       ncc += di * dj / denom;
     }
 
-    if (isnan(ncc))
-      return -1.0f;
+    //if (isnan(ncc))
+    //  return -1.0f;
     return ncc;
   }
 
