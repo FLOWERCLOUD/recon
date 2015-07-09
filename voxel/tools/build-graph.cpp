@@ -61,44 +61,6 @@ int main(int argc, char* argv[])
   recon::VoxelModel model(level, loader.model_boundingbox());
   recon::VoxelGraph graph;
   recon::build_graph(graph, model, cameras);
-
-  QFile outfile(outputPath);
-  if (!outfile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-    qDebug() << "Cannot open output file: " << outputPath;
-    return 1;
-  }
-
-  QTextStream stream(&outfile);
-  stream.setRealNumberNotation(QTextStream::ScientificNotation);
-  stream.setRealNumberPrecision(15);
-
-  stream << graph.level << "\n"
-         << graph.width << "\n"
-         << graph.voxel_size << "\n"
-         << graph.voxel_minpos[0] << " "
-         << graph.voxel_minpos[1] << " "
-         << graph.voxel_minpos[2] << "\n"
-         << graph.voxel_maxpos[0] << " "
-         << graph.voxel_maxpos[1] << " "
-         << graph.voxel_maxpos[2] << "\n";
-
-  for (uint64_t m = 0; m < model.morton_length; ++m) {
-    uint32_t x, y, z;
-    recon::morton_decode(m, x, y, z);
-    stream << "(" << x << "," << y << "," << z << ") "
-           << graph.foreground[m] << "\n";
-  }
-  for (uint64_t m = 0; m < model.morton_length; ++m) {
-    uint32_t x, y, z;
-    recon::morton_decode(m, x, y, z);
-    stream << "(" << x << "," << y << "," << z << ") "
-           << graph.x_edges[m] << " +x\n";
-    stream << "(" << x << "," << y << "," << z << ") "
-           << graph.y_edges[m] << " +y\n";
-    stream << "(" << x << "," << y << "," << z << ") "
-           << graph.z_edges[m] << " +z\n";
-  }
-
-  outfile.close();
+  recon::save_graph(graph, outputPath);
   return 0;
 }

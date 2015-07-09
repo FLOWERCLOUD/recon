@@ -29,6 +29,7 @@
 #include "morton_code.h"
 #include "VoxelModel.h"
 #include <QList>
+#include <QString>
 #include <vector>
 
 namespace recon {
@@ -53,5 +54,8 @@ struct VoxelGraph {
 void build_graph(VoxelGraph& graph,
                  const VoxelModel& model,
                  const QList<Camera>& cameras);
+
+bool load_graph(VoxelGraph& graph, const QString& path);
+bool save_graph(const VoxelGraph& graph, const QString& path);
 
 }

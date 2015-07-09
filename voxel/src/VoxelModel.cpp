@@ -2,6 +2,8 @@
 #include "morton_code.h"
 #include <QtGlobal>
 #include <QColor>
+#include <QTextStream>
+#include <QFile>
 
 namespace recon {
 
@@ -27,6 +29,20 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
     Vec3 extent = Vec3(vsiz, vsiz, vsiz);
     virtual_box = AABox(start, start + extent);
   }
+}
+
+bool load_voxels(VoxelModel& model, VoxelList& vlist, const QString& path)
+{
+  QFile file(path);
+
+  return true;
+}
+
+bool save_voxels(const VoxelModel& model, const VoxelList& vlist, const QString& path)
+{
+  QFile file(path);
+
+  return true;
 }
 
 }
