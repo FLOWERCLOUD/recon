@@ -60,6 +60,7 @@ int main(int argc, char* argv[])
   VoxelModel model(graph.level, AABox(Point3::load(graph.voxel_minpos),
                                       Point3::load(graph.voxel_maxpos)));
   recon::save_points_ply(outputPath, model, vlist);
+  //recon::save_voxels(model, vlist, outputPath);
 
   return 0;
 }

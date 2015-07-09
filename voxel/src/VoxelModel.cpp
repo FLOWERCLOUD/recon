@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QTextStream>
 #include <QFile>
+#include <QtDebug>
 
 namespace recon {
 
@@ -31,17 +32,49 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
   }
 }
 
-bool load_voxels(VoxelModel& model, VoxelList& vlist, const QString& path)
+/*bool load_voxels(VoxelModel& model, VoxelList& vlist, const QString& path)
 {
   QFile file(path);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    qDebug() << "Cannot open input file!";
+    return false;
+  }
+
+  QTextStream stream(&file);
 
   return true;
-}
+}*/
 
 bool save_voxels(const VoxelModel& model, const VoxelList& vlist, const QString& path)
 {
   QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+    qDebug() << "Cannot open output file: " << path;
+    return false;
+  }
 
+  QTextStream stream(&file);
+  stream.setRealNumberNotation(QTextStream::ScientificNotation);
+  stream.setRealNumberPrecision(15);
+
+  stream << model.level << "\n";
+  stream << model.width << "\n";
+  stream << (float)model.virtual_box.minpos.x() << " "
+         << (float)model.virtual_box.minpos.y() << " "
+         << (float)model.virtual_box.minpos.z() << "\n"
+         << (float)model.virtual_box.minpos.x() << " "
+         << (float)model.virtual_box.minpos.y() << " "
+         << (float)model.virtual_box.minpos.z() << "\n";
+
+  stream << vlist.size() << "\n";
+  for (uint64_t m: vlist) {
+    uint32_t x, y, z;
+    morton_decode(m, x, y, z);
+    stream << x << " " << y << " " << z << "\n";
+  }
+
+  stream.flush();
+  file.close();
   return true;
 }
 
