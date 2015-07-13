@@ -32,7 +32,7 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
   }
 }
 
-/*bool load_voxels(VoxelModel& model, VoxelList& vlist, const QString& path)
+bool load_voxels(VoxelModel& model, VoxelList& vlist, const QString& path)
 {
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -42,8 +42,29 @@ VoxelModel::VoxelModel(uint16_t lv, AABox model_box)
 
   QTextStream stream(&file);
 
+  int level, width;
+  float minpos[3], maxpos[3];
+  stream >> level >> width
+         >> minpos[0] >> minpos[1] >> minpos[2]
+         >> maxpos[0] >> maxpos[1] >> maxpos[2];
+
+  model = VoxelModel(
+    level, AABox(Point3::load(minpos), Point3::load(maxpos))
+  );
+
+  uint64_t nvoxels;
+  stream >> nvoxels;
+  vlist.clear();
+  vlist.reserve(nvoxels);
+
+  for (uint64_t i = 0; i < nvoxels; ++i) {
+    uint32_t x, y, z;
+    stream >> x >> y >> z;
+    vlist.append(morton_encode(x,y,z));
+  }
+
   return true;
-}*/
+}
 
 bool save_voxels(const VoxelModel& model, const VoxelList& vlist, const QString& path)
 {
@@ -62,9 +83,9 @@ bool save_voxels(const VoxelModel& model, const VoxelList& vlist, const QString&
   stream << (float)model.virtual_box.minpos.x() << " "
          << (float)model.virtual_box.minpos.y() << " "
          << (float)model.virtual_box.minpos.z() << "\n"
-         << (float)model.virtual_box.minpos.x() << " "
-         << (float)model.virtual_box.minpos.y() << " "
-         << (float)model.virtual_box.minpos.z() << "\n";
+         << (float)model.virtual_box.maxpos.x() << " "
+         << (float)model.virtual_box.maxpos.y() << " "
+         << (float)model.virtual_box.maxpos.z() << "\n";
 
   stream << vlist.size() << "\n";
   for (uint64_t m: vlist) {
