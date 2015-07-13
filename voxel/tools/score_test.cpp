@@ -1,6 +1,7 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
 #include "../src/VoxelScore1.h"
+#include "../src/VoxelScore2.h"
 #include "../src/PhotoConsistency.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
@@ -26,6 +27,7 @@ using recon::AABox;
 using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
+using Score = recon::VoxelScore2;
 
 int main(int argc, char** argv)
 {
@@ -74,7 +76,7 @@ int main(int argc, char** argv)
 
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
-  recon::PhotoConsistency<recon::VoxelScore1> pcs(model, cameras);
+  recon::PhotoConsistency<Score> pcs(model, cameras);
 
   cv::Mat img_i = cv::imread(cameras[cam_i].imagePath().toStdString());
   //Mat4 txfm_i = cameras[cam_i].intrinsicForImage(img_i.cols, img_i.rows);
@@ -95,7 +97,7 @@ int main(int argc, char** argv)
   cv::imshow("Image I", img_i);
 
   // Voxel Score
-  recon::VoxelScore1 score(pcs.cameras, pcs.images, cam_i, voxel_pos, pcs.voxel_size);
+  Score score(pcs.cameras, pcs.images, cam_i, voxel_pos, pcs.voxel_size);
 
   for (int i = 0, n = score.ccams.num; i < n; ++i) {
     int cam_j = score.ccams.cam_js[i];
