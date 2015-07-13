@@ -58,6 +58,8 @@ int main(int argc, char* argv[])
   QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
   optLevel.setDefaultValue("7");
   parser.addOption(optLevel);
+  QCommandLineOption optExportPLY(QStringList() << "p" << "ply", "Export PLY");
+  parser.addOption(optExportPLY);
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();

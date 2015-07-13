@@ -6,7 +6,7 @@ def parse_args():
     return parser.parse_args()
 
 def load_graph(path):
-    import string, numpy as np
+    import string, numpy as np, sys
     with open(path, "r") as finput:
         level = int(finput.readline())
         width = long(finput.readline())
@@ -19,11 +19,12 @@ def load_graph(path):
             buf = string.split(finput.readline())
             x, y, z, frgnd = map(int, buf)
             frgnd = bool(frgnd)
-        while True:
-            buf = finput.readline()
-            if not buf:
-                break
-            buf = string.split(buf)
+            sys.stdout.write("Loading vhull: %.2f %%\r" % (float(i+1) / (length) * 100.0))
+            sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        for i in xrange(0,3*length):
+            buf = string.split(finput.readline())
             x, y, z, rho = map(float, buf[0:4])
             if buf[-1] == '+x':
                 canvas[y,z,x,0] = rho
@@ -31,6 +32,10 @@ def load_graph(path):
                 canvas[y,z,x,1] = rho
             elif buf[-1] == '+z':
                 canvas[y,z,x,2] = rho
+            sys.stdout.write("Loading edges: %.2f %%\r" % (float(i+1) / (3.0 * length) * 100.0))
+            sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
     return canvas
 
 def mainfunc():
@@ -41,7 +46,7 @@ def mainfunc():
     #image = np.multiply(image, 255, dtype=np.uint8)
     def plot(y):
         import matplotlib.pyplot as plt
-        from mpl_toolkits.mplot3d import Axes3D
+        #from mpl_toolkits.mplot3d import Axes3D
         img = image[y]
         plt.figure()
         plt.axis([0,img.shape[1],0,img.shape[0]])
@@ -69,10 +74,10 @@ def mainfunc():
         #ax = fig.add_subplot(111, projection='3d')
         #ax.plot_surface(X, Y, img[:,:,2], rstride=1, cstride=1)
 
-        fig = plt.figure()
-        plt.suptitle("magtitude")
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot_surface(X, Y, np.sqrt(np.square(img[:,:,0]) + np.square(img[:,:,1]) + np.square(img[:,:,2])), rstride=1, cstride=1)
+        #fig = plt.figure()
+        #plt.suptitle("magtitude")
+        #ax = fig.add_subplot(111, projection='3d')
+        #ax.plot_surface(X, Y, np.sqrt(np.square(img[:,:,0]) + np.square(img[:,:,1]) + np.square(img[:,:,2])), rstride=1, cstride=1)
 
         plt.show()
 

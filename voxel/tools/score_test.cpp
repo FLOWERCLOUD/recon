@@ -27,7 +27,7 @@ using recon::AABox;
 using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
-using Score = recon::VoxelScore2;
+using Score = recon::VoxelScore1;
 
 int main(int argc, char** argv)
 {
