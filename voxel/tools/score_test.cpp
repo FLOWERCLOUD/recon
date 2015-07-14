@@ -127,7 +127,7 @@ int main(int argc, char** argv)
   }
 
   // Print vote
-  printf("vote = %f\n", score.vote());
+  //printf("vote = %f\n", score.vote());
 
   // Visualize Score Curve
   if (score.ccams.num >= 1) {

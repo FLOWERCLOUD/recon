@@ -1,7 +1,7 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
 #include "../src/Correlation.h"
-#include "../src/Epipolar.h"
+#include "../src/Epipolar2.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -107,9 +107,10 @@ int main(int argc, char** argv)
   // Render Epipolar Line
   Ray3 r = Ray3(voxel_pos, voxel_dir);
   Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, r);
-  epipolar.walk(
-    [&img_j](float x, float y, float depth){
-      int px = roundf(x), py = roundf(y);
+  epipolar.per_pixel(
+    [&img_j](Vec3 pt0, Vec3 pt1){
+      int px = roundf((float)pt0.x()), py = roundf((float)pt0.y());
+      float depth = (float)pt0.z();
       if (px >= 0 && py >= 0 && px < img_j.cols && py < img_j.rows) {
         if (fabsf(depth) <= 1.0f)
           img_j.at<cv::Vec3b>(py, px) =  cv::Vec3b(0, 0, 255);
@@ -140,10 +141,10 @@ int main(int argc, char** argv)
            << "data = np.array([\n";
     auto sw_i = SampleWindow(QImage(cameras[cam_i].imagePath()), vpos_i);
     QImage qimg_j = QImage(cameras[cam_j].imagePath());
-    epipolar.walk(
-      [&qimg_j,&stream,&sw_i](float x, float y, float d){
-        auto sw_j = SampleWindow(qimg_j, Vec3(x,y,0.0));
-        stream << "[float(\"" << d
+    epipolar.per_pixel(
+      [&qimg_j,&stream,&sw_i](Vec3 pt0, Vec3 pt1){
+        auto sw_j = SampleWindow(qimg_j, pt0);
+        stream << "[float(\"" << (float)pt0.z()
                << "\"), float(\"" << (float)NCC(sw_i, sw_j)
                << "\")],\n";
       }

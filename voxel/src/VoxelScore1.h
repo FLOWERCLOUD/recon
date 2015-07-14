@@ -64,6 +64,47 @@ struct ClosestCameras {
   }
 };
 
+struct PeakFinder {
+  constexpr static int N = 5;
+  float xbuf[N];
+  double ybuf[N];
+  int bufi = 0;
+
+  float x() const
+  {
+    return xbuf[(N/2)];
+  }
+
+  double y() const
+  {
+    return ybuf[(N/2)];
+  }
+
+  bool valid() const
+  {
+    if (bufi < N)
+      return false;
+
+    bool is_maxima = true;
+    for (int i = 0; i < N; ++i) {
+      is_maxima = is_maxima && (ybuf[(N/2)] >= ybuf[i]);
+    }
+    return is_maxima;
+  }
+
+  void push(float x, double y)
+  {
+    if (bufi < N) {
+      xbuf[bufi] = x, ybuf[bufi] = y;
+      bufi++;
+    } else {
+      memmove(xbuf, xbuf+1, sizeof(float) * (N-1));
+      memmove(ybuf, ybuf+1, sizeof(double) * (N-1));
+      xbuf[N-1] = x, ybuf[N-1] = y;
+    }
+  }
+};
+
 struct VoxelScore1 {
   float voxel_size;
   ClosestCameras ccams;
@@ -105,31 +146,15 @@ struct VoxelScore1 {
     const QImage& image_j = ccams._images->at(cam_j);
     auto epipolar = make_epipolar(ith_jcam);
 
-    const int bufn = 5;
-    float xbuf[bufn];
-    double ybuf[bufn];
-    int bufi = 0;
+    PeakFinder peak;
     epipolar.walk(
-      [&xbuf,&ybuf,&bufi,&image_j,this]
+      [&peak,&image_j,this]
       (float x, float y, float depth) {
         SampleWindow swj(image_j, Vec3(x,y,0.0f));
         float ncc = NormalizedCrossCorrelation(swin_i, swj);
-        if (__builtin_expect(bufi == (bufn-1), 1)) {
-          xbuf[bufi] = depth;
-          ybuf[bufi] = ncc;
-          bool is_maxima = true;
-          for (int i = 0; i < bufn; ++i) {
-            is_maxima = is_maxima && (ybuf[(bufn/2)] >= ybuf[i]);
-          }
-          if (is_maxima) {
-            sjdk.append(QPointF(xbuf[(bufn/2)], ybuf[(bufn/2)]));
-          }
-          memmove(xbuf, xbuf+1, sizeof(float) * (bufn-1));
-          memmove(ybuf, ybuf+1, sizeof(double) * (bufn-1));
-        } else {
-          xbuf[bufi] = depth;
-          ybuf[bufi] = ncc;
-          bufi++;
+        peak.push(depth, ncc);
+        if (peak.valid()) {
+          sjdk.append(QPointF(peak.x(), peak.y()));
         }
       }
     );
@@ -156,30 +181,8 @@ struct VoxelScore1 {
 
   inline double vote() const
   {
-    if (ccams.num < 1)
-      return 0.0;
-
-    bool ok = true;
-    float c0 = compute(0.0);
-    auto epipolar = make_epipolar(0);
-
-    epipolar.walk_ranged(1.0f,
-      [&c0,this](float x, float y, float d){
-        c0 = fmax(c0, compute(d));
-      }
-    );
-    //printf("c0 = %f\n", c0);
-    epipolar.walk(
-      [c0,&ok,this](float x, float y, float d){
-        float c = compute(d);
-        //if (c0 < c) {
-        //  printf("c(d=%f) = %f\n", d, c);
-        //}
-        ok = ok && (c0 >= c);
-      }
-    );
-
-    return (ok ? c0 : 0.0);
+    abort();
+    return 0.0 / 0.0;
   }
 };
 
