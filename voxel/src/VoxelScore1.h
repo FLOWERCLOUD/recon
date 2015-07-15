@@ -121,7 +121,7 @@ struct VoxelScore1 {
     const Camera& ci = cams.at(cam_i);
     const QImage& image_i = imgs.at(cam_i);
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
-    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 1.4f);
+    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
 
     sjdk.reserve(128);
     for (int i = 0; i < ccams.num; ++i) {

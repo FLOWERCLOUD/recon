@@ -45,31 +45,15 @@ struct VoxelScore2 {
     const QImage& image_j = ccams._images->at(cam_j);
     auto epipolar = make_epipolar(ith_jcam);
 
-    const int bufn = 5;
-    float xbuf[bufn];
-    double ybuf[bufn];
-    int bufi = 0;
+    PeakFinder peak;
     epipolar.walk_ranged(3.0f,
-      [&xbuf,&ybuf,&bufi,&image_j,this]
+      [&peak,&image_j,this]
       (float x, float y, float depth) {
         SampleWindow swj(image_j, Vec3(x,y,0.0f));
         float ncc = NormalizedCrossCorrelation(swin_i, swj);
-        if (__builtin_expect(bufi == (bufn-1), 1)) {
-          xbuf[bufi] = depth;
-          ybuf[bufi] = ncc;
-          bool is_maxima = true;
-          for (int i = 0; i < bufn; ++i) {
-            is_maxima = is_maxima && (ybuf[(bufn/2)] >= ybuf[i]);
-          }
-          if (is_maxima) {
-            sjdk.append(QPointF(xbuf[(bufn/2)], ybuf[(bufn/2)]));
-          }
-          memmove(xbuf, xbuf+1, sizeof(float) * (bufn-1));
-          memmove(ybuf, ybuf+1, sizeof(double) * (bufn-1));
-        } else {
-          xbuf[bufi] = depth;
-          ybuf[bufi] = ncc;
-          bufi++;
+        peak.push(depth, ncc);
+        if (peak.valid()) {
+          sjdk.append(QPointF(peak.x(), peak.y()));
         }
       }
     );
