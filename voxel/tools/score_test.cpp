@@ -1,7 +1,7 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
 #include "../src/VoxelScore1.h"
-#include "../src/VoxelScore2.h"
+//#include "../src/VoxelScore2.h"
 #include "../src/PhotoConsistency.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
@@ -109,10 +109,10 @@ int main(int argc, char** argv)
 
     cv::Mat img_j = cv::imread(cameras[cam_j].imagePath().toStdString());
     auto epipolar = score.make_epipolar(i);
-    //recon::Epipolar epipolar(img_j.cols, img_j.rows, txfm_j, score.ray);
-    epipolar.walk(
-      [&img_j](float x, float y, float depth){
-        int px = roundf(x), py = roundf(y);
+    epipolar.per_pixel(
+      [&img_j](Vec3 pt0, Vec3 pt1) {
+        float depth = (float)pt0.z();
+        int px = roundf((float)pt0.x()), py = roundf((float)pt0.y());
         if (px >= 0 && py >= 0 && px < img_j.cols && py < img_j.rows) {
           if (fabsf(depth) <= 1.0f)
             img_j.at<cv::Vec3b>(py, px) =  cv::Vec3b(0, 0, 255);
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
   }
 
   // Print vote
-  //printf("vote = %f\n", score.vote());
+  printf("vote = %f\n", score.vote());
 
   // Visualize Score Curve
   if (score.ccams.num >= 1) {
@@ -141,8 +141,9 @@ int main(int argc, char** argv)
       stream << "import numpy as np, matplotlib.pyplot as plt\n"
              << "data = np.array([\n";
       auto epipolar = score.make_epipolar(0);
-      epipolar.walk(
-        [&stream,&score](float x, float y, float d){
+      epipolar.per_pixel(
+        [&stream,&score](Vec3 pt0, Vec3 pt1) {
+          float d = (float)pt0.z();
           stream << "[float(\"" << d
                  << "\"), float(\"" << score.compute(d)
                  << "\")],\n";

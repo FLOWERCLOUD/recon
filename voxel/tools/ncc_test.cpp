@@ -1,7 +1,7 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
 #include "../src/Correlation.h"
-#include "../src/Epipolar2.h"
+#include "../src/Epipolar.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>

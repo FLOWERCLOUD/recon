@@ -11,7 +11,7 @@
 namespace recon {
 
 struct ClosestCameras {
-  static const int MAX_NUM = 8;
+  static const int MAX_NUM = 4;
   int num;
   int cam_i;
   int cam_js[MAX_NUM];
@@ -31,7 +31,9 @@ struct ClosestCameras {
     Mat4 m = ci.intrinsicForImage(img.width(), img.height());
     txfm_i = m * ci.extrinsic();
 
-    append_cameras(x, 0.9396926207859084f, 0.984807753012208f);
+    append_cameras(x, 0.9396926207859084f, 0.984807753012208f); // 10 - 20 deg
+    append_cameras(x, 0.984807753012208f, 0.9961946980917455f); // 5 - 10 deg
+    append_cameras(x, 0.9063077870366499f, 0.9396926207859084f); // 20 - 25 deg
   }
 
   bool append_cameras(Point3 x, float cos_min, float cos_max)
@@ -147,10 +149,12 @@ struct VoxelScore1 {
     auto epipolar = make_epipolar(ith_jcam);
 
     PeakFinder peak;
-    epipolar.walk(
+    epipolar.per_pixel<5>(
       [&peak,&image_j,this]
-      (float x, float y, float depth) {
-        SampleWindow swj(image_j, Vec3(x,y,0.0f));
+      (Vec3 pt0, Vec3 pt1) {
+        // TODO : should consider voxel space....
+        float depth = (float)pt0.z();
+        SampleWindow swj(image_j, pt0);
         float ncc = NormalizedCrossCorrelation(swin_i, swj);
         peak.push(depth, ncc);
         if (peak.valid()) {
@@ -162,7 +166,7 @@ struct VoxelScore1 {
 
   static inline double parzen_window(double x)
   {
-    const double sigma = 1.0;
+    const double sigma = 4.0;
     double a = x / sigma;
     return exp(-0.5 * a * a);
   }
@@ -181,8 +185,20 @@ struct VoxelScore1 {
 
   inline double vote() const
   {
-    abort();
-    return 0.0 / 0.0;
+    if (ccams.num < 1)
+      return 0.0;
+
+    float c0 = compute(0.0);
+    for (QPointF s : sjdk) {
+      if (fabsf(s.x()) <= 1.0f)
+        c0 = fmax(c0, compute(s.x()));
+    }
+
+    bool ok = true;
+    for (QPointF s : sjdk) {
+      ok = ok && (c0 >= compute(s.x()));
+    }
+    return (ok ? c0 : 0.0);
   }
 };
 

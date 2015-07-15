@@ -1,7 +1,7 @@
 #include <recon/CameraLoader.h>
 #include <recon/VoxelModel.h>
 #include "../src/VoxelScore1.h"
-#include "../src/VoxelScore2.h"
+//#include "../src/VoxelScore2.h"
 #include "../src/PhotoConsistency.h"
 #include <recon/Debug.h>
 #include <QCommandLineParser>
@@ -28,7 +28,7 @@ using recon::AABox;
 using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
-using Score = recon::VoxelScore2;
+using Score = recon::VoxelScore1;
 
 int main(int argc, char** argv)
 {

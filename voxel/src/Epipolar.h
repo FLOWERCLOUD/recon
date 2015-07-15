@@ -15,143 +15,102 @@ using vectormath::aos::utils::Ray3;
 struct Epipolar {
   int width;
   int height;
-  Mat4 txfm;
-  Ray3 ray;
 
-  float e_x;
-  float e_y;
-  float e_w;
-  float d_x;
-  float d_y;
-  float d_w;
   float d_k;
-  float e_px;
-  float e_py;
+  Vec4 ve;
+  Vec4 vd;
 
-  Epipolar(int w, int h, Mat4 m, Ray3 r)
-  : width(w), height(h), txfm(m), ray(r)
+  Epipolar(int w, int h, Mat4 txfm, Ray3 ray)
+  : width(w), height(h)
   {
-    Vec4 e = transform(txfm, r.start);
-    Vec4 d = txfm * Vec4(r.diff, 0.0f);
-
-    e_x = (float)e.x(), e_y = (float)e.y(), e_w = (float)e.w();
-    d_x = (float)d.x(), d_y = (float)d.y(), d_w = (float)d.w();
+    Vec4 e = transform(txfm, ray.start);
+    Vec4 d = txfm * Vec4(ray.diff, 0.0f);
     float a = (float)(d.x() - d.w() * e.x() / e.w());
     float b = (float)(d.y() - d.w() * e.y() / e.w());
     d_k = sqrtf(a * a + b * b);
-    e_px = e_x / e_w;
-    e_py = e_y / e_w;
+    ve = e;
+    vd = d;
   }
 
-  inline float depth(float x, float y) const
+  inline Vec3 lerp2D(float d) const
   {
-    float pdx = x - e_px, pdy = y - e_py;
-    float len = sqrtf(pdx * pdx + pdy * pdy);
-    float dp = pdx * d_x + pdy * d_y;
-    float depth = (e_w * len) / (d_k - d_w * len);
-    return copysignf(depth, dp);
+    return copy_z(Vec3::proj(ve + d * vd), Vec3(d,d,d));
   }
 
-  template<typename F>
-  void walk_ranged(float dist, F f) const
+  inline float solve_depth(Vec3 xy) const
   {
-    Vec3 p0 = Vec3::proj(transform(txfm, ray[-dist]));
-    Vec3 p1 = Vec3::proj(transform(txfm, ray[0.0f]));
-    Vec3 p2 = Vec3::proj(transform(txfm, ray[dist]));
-    p1 = copy_z(p1, Vec3::zero());
-    p2 = copy_z(p2, Vec3::zero());
-    Vec3 d = normalize(p2 - p1);
-    float dx = (float)d.x(), dy = (float)d.y();
-    float adx = fabsf(dx), ady = fabsf(dy);
+    Vec3 delta = copy_z(xy - Vec3::proj(ve), Vec3::zero());
+    float len = (float)length(delta);
+    float dp = (float)dot(delta, Vec3::cast(vd));
+    float e_w = (float)ve.w();
+    float d_w = (float)vd.w();
+    float t = (e_w * len) / (d_k - d_w * len);
+    return copysignf(t, dp);
+  }
 
-    if (adx >= ady) { // Along X
+  //
+  // F: void func(Vec3 pt0, Vec3 pt1)
+  //    where pt0, pt1 are 2D points with z = depth
+  //
+  template<int RANGE_IN_PIX = -1, typename F>
+  void per_pixel(F f) const
+  {
+    // end points
+    Vec3 ep0 = lerp2D(-1.0f), ep1 = lerp2D(1.0f);
+    float dx = (float)((ep1 - ep0).x());
+    float dy = (float)((ep1 - ep0).y());
+    if (fabsf(dx) >= fabsf(dy)) { // along X
       float m = (dy / dx);
-      float b = (float)p0.y() - (float)p0.x() * m;
-      float x0 = (float)p0.x(), x1 = (float)p2.x();
-      if (x0 > x1)
-        std::swap(x0, x1);
-      x0 = floorf(x0), x1 = ceilf(x1);
-      auto invoke = [m,b,f,x0,x1,this](float x)
+      float b = (float)ep0.y() - (float)ep0.x() * m;
+      auto invoke = [m,b,f,this](float x0, float x1)
       {
-        float y = m * x + b;
-        f(x, y, depth(x, y));
+        float y0 = m * x0 + b;
+        float y1 = m * x1 + b;
+        Vec3 p0 = Vec3(x0,y0, solve_depth(Vec3(x0,y0,0.0)));
+        Vec3 p1 = Vec3(x1,y1, solve_depth(Vec3(x1,y1,0.0)));
+        f(p0, p1);
       };
-      for (int x = x0; x < x1; ++x) {
-        invoke((float)x);
-        //invoke((float)x + 0.25f);
-        invoke((float)x + 0.5f);
-        //invoke((float)x + 0.75f);
+      //
+      if (RANGE_IN_PIX < 1) {
+        for (int x = 0, w = width; x < w; ++x)
+          invoke((float)x, (float)(x+1));
+      } else {
+        float ex0 = (float)ep0.x();
+        float ex1 = (float)ep1.x();
+        if (ex0 > ex1)
+          std::swap(ex0, ex1);
+        ex0 = floorf(ex0), ex1 = ceilf(ex1);
+        ex0 -= RANGE_IN_PIX;
+        ex1 += RANGE_IN_PIX;
+        //printf("ex %f %f\n", ex0, ex1);
+        for (int x = ex0; x <= ex1; ++x)
+          invoke((float)x, (float)(x+1));
       }
-    } else { // Along Y
-      float m = (float)(dx / dy);
-      float b = (float)p0.x() - (float)p0.y() * m;
-      float y0 = (float)p0.y(), y1 = (float)p2.y();
-      if (y0 > y1)
-        std::swap(y0, y1);
-      y0 = floorf(y0), y1 = ceilf(y1);
-      auto invoke = [m,b,f,y0,y1,this](float y)
+    } else { // along Y
+      float m = (dx / dy);
+      float b = (float)ep0.x() - (float)ep0.y() * m;
+      auto invoke = [m,b,f,this](float y0, float y1)
       {
-        float x = m * y + b;
-        f(x, y, depth(x, y));
+        float x0 = m * y0 + b;
+        float x1 = m * y1 + b;
+        Vec3 p0 = Vec3(x0,y0, solve_depth(Vec3(x0,y0,0.0)));
+        Vec3 p1 = Vec3(x1,y1, solve_depth(Vec3(x1,y1,0.0)));
+        f(p0, p1);
       };
-      for (int y = y0; y < y1; ++y) {
-        invoke((float)y);
-        //invoke((float)y + 0.25f);
-        invoke((float)y + 0.5f);
-        //invoke((float)y + 0.75f);
-      }
-    }
-  }
-
-  template<typename F>
-  void walk(F f) const
-  {
-    Vec3 p0 = Vec3::proj(transform(txfm, ray[-1.0f]));
-    Vec3 p1 = Vec3::proj(transform(txfm, ray[0.0f]));
-    Vec3 p2 = Vec3::proj(transform(txfm, ray[1.0f]));
-    p1 = copy_z(p1, Vec3::zero());
-    p2 = copy_z(p2, Vec3::zero());
-    Vec3 d = normalize(p2 - p1);
-    float dx = (float)d.x(), dy = (float)d.y();
-    float adx = fabsf(dx), ady = fabsf(dy);
-
-    if (adx >= ady) { // Along X
-      float m = (dy / dx);
-      float b = (float)p0.y() - (float)p0.x() * m;
-      float x0 = (float)p0.x();
-      float x1 = (float)p2.x();
-      if (x0 > x1)
-        std::swap(x0, x1);
-      auto invoke = [m,b,f,x0,x1,this](float x)
-      {
-        //bool inside = (x0 <= x && x <= x1);
-        float y = m * x + b;
-        f(x, y, depth(x, y));
-      };
-      for (int x = 0, w = width; x < w; ++x) {
-        invoke((float)x);
-        //invoke((float)x + 0.25f);
-        invoke((float)x + 0.5f);
-        //invoke((float)x + 0.75f);
-      }
-    } else { // Along Y
-      float m = (float)(dx / dy);
-      float b = (float)p0.x() - (float)p0.y() * m;
-      float y0 = (float)p0.y();
-      float y1 = (float)p2.y();
-      if (y0 > y1)
-        std::swap(y0, y1);
-      auto invoke = [m,b,f,y0,y1,this](float y)
-      {
-        //bool inside = (y0 <= y && y <= y1);
-        float x = m * y + b;
-        f(x, y, depth(x, y));
-      };
-      for (int y = 0, h = height; y < h; ++y) {
-        invoke((float)y);
-        //invoke((float)y + 0.25f);
-        invoke((float)y + 0.5f);
-        //invoke((float)y + 0.75f);
+      //
+      if (RANGE_IN_PIX < 1) {
+        for (int y = 0, h = height; y < h; ++h)
+          invoke((float)y, (float)(y+1));
+      } else {
+        float ey0 = (float)ep0.y();
+        float ey1 = (float)ep1.y();
+        if (ey0 > ey1)
+          std::swap(ey0, ey1);
+        ey0 = floorf(ey0), ey1 = ceilf(ey1);
+        ey0 -= RANGE_IN_PIX;
+        ey1 += RANGE_IN_PIX;
+        for (int y = ey0; y <= ey1; ++y)
+          invoke((float)y, (float)(y+1));
       }
     }
   }
