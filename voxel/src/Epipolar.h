@@ -49,14 +49,22 @@ struct Epipolar {
   }
 
   //
+  // RANGE_EXTENDED: = M
+  //       --------|-----------|-------->
+  //          M    |  |d| < 1  |   M
+  //              ex0         ex1
+  //
+  //  if M = -1 => through the whole image
+  //
+  //
   // F: void func(Vec3 pt0, Vec3 pt1)
   //    where pt0, pt1 are 2D points with z = depth
   //
-  template<int RANGE_IN_PIX = -1, typename F>
-  void per_pixel(F f) const
+  template<int RANGE_EXTENDED = -1, typename F>
+  void per_pixel(F f, float drange = 1.0f) const
   {
     // end points
-    Vec3 ep0 = lerp2D(-1.0f), ep1 = lerp2D(1.0f);
+    Vec3 ep0 = lerp2D(-drange), ep1 = lerp2D(drange);
     float dx = (float)((ep1 - ep0).x());
     float dy = (float)((ep1 - ep0).y());
     if (fabsf(dx) >= fabsf(dy)) { // along X
@@ -71,7 +79,7 @@ struct Epipolar {
         f(p0, p1);
       };
       //
-      if (RANGE_IN_PIX < 1) {
+      if (RANGE_EXTENDED < 1) {
         for (int x = 0, w = width; x < w; ++x)
           invoke((float)x, (float)(x+1));
       } else {
@@ -80,8 +88,8 @@ struct Epipolar {
         if (ex0 > ex1)
           std::swap(ex0, ex1);
         ex0 = floorf(ex0), ex1 = ceilf(ex1);
-        ex0 -= RANGE_IN_PIX;
-        ex1 += RANGE_IN_PIX;
+        ex0 -= RANGE_EXTENDED;
+        ex1 += RANGE_EXTENDED;
         //printf("ex %f %f\n", ex0, ex1);
         for (int x = ex0; x <= ex1; ++x)
           invoke((float)x, (float)(x+1));
@@ -98,7 +106,7 @@ struct Epipolar {
         f(p0, p1);
       };
       //
-      if (RANGE_IN_PIX < 1) {
+      if (RANGE_EXTENDED < 1) {
         for (int y = 0, h = height; y < h; ++h)
           invoke((float)y, (float)(y+1));
       } else {
@@ -107,8 +115,8 @@ struct Epipolar {
         if (ey0 > ey1)
           std::swap(ey0, ey1);
         ey0 = floorf(ey0), ey1 = ceilf(ey1);
-        ey0 -= RANGE_IN_PIX;
-        ey1 += RANGE_IN_PIX;
+        ey0 -= RANGE_EXTENDED;
+        ey1 += RANGE_EXTENDED;
         for (int y = ey0; y <= ey1; ++y)
           invoke((float)y, (float)(y+1));
       }

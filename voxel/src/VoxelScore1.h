@@ -149,8 +149,8 @@ struct VoxelScore1 {
     auto epipolar = make_epipolar(ith_jcam);
 
     PeakFinder peak;
-    epipolar.per_pixel<5>(
-      [&peak,&image_j,this]
+    epipolar.per_pixel<1>(
+      [&peak,&image_j,this,&epipolar]
       (Vec3 pt0, Vec3 pt1) {
         // TODO : should consider voxel space....
         float depth = (float)pt0.z();
@@ -160,15 +160,23 @@ struct VoxelScore1 {
         if (peak.valid()) {
           sjdk.append(QPointF(peak.x(), peak.y()));
         }
+        /*depth = (float)(pt0.z() + pt1.z()) * 0.5f;
+        swj = SampleWindow(image_j, epipolar.lerp2D(depth));
+        ncc = NormalizedCrossCorrelation(swin_i, swj);
+        peak.push(depth, ncc);
+        if (peak.valid()) {
+          sjdk.append(QPointF(peak.x(), peak.y()));
+        }*/
       }
-    );
+    , 3.0f);
   }
 
   static inline double parzen_window(double x)
   {
-    const double sigma = 4.0;
-    double a = x / sigma;
-    return exp(-0.5 * a * a);
+    //const double sigma = 1.0;
+    //double a = x / sigma;
+    //return exp(-0.5 * a * a);
+    return (fabs(x) <= 1.0 ? 1.0 : 0.0);
   }
 
   inline double compute(float d) const
