@@ -47,8 +47,8 @@ int main(int argc, char** argv)
   parser.addOption(optLevel);
   QCommandLineOption optVoxelY(QStringList() << "y" << "voxel-y", "Voxel Y", "voxel-y");
   parser.addOption(optVoxelY);
-  //QCommandLineOption optCamI(QStringList() << "i" << "cam-i", "Camera I", "cam-i");
-  //parser.addOption(optCamI);
+  QCommandLineOption optCamI(QStringList() << "i" << "cam-i", "Camera I", "cam-i");
+  parser.addOption(optCamI);
 
   parser.process(app);
 
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 
   int level = parser.value(optLevel).toInt();
   float voxel_y = parser.value(optVoxelY).toFloat();
-  //int cam_i = (parser.isSet(optCamI) ? parser.value(optCamI).toInt() : -1);
+  int cam_i = (parser.isSet(optCamI) ? parser.value(optCamI).toInt() : -1);
 
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
@@ -83,12 +83,12 @@ int main(int argc, char** argv)
                                           voxel_y/(model.height),
                                           i/float(model.depth));
       printf("Computing... %.2f %%\n", float(i*w+j)/float(w*w)*100.0f);
-      //if (cam_i >= 0) {
-      //  Score score(pcs.cameras, pcs.images, cam_i, pos, pcs.voxel_size);
-      //  canvas.at<float>(i,j) = std::max(score.vote(), 0.0);
-      //} else {
-      canvas.at<float>(i,j) = std::max(pcs.vote(pos), 0.0);
-      //}
+      if (cam_i >= 0) {
+        Score score(pcs.cameras, pcs.images, cam_i, pos, pcs.voxel_size);
+        canvas.at<float>(i,j) = std::max(score.vote(), 0.0);
+      } else {
+        canvas.at<float>(i,j) = std::max(pcs.vote(pos), 0.0);
+      }
     }
   }
   printf("\n");

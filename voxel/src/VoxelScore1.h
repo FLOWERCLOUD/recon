@@ -67,7 +67,7 @@ struct ClosestCameras {
 };
 
 struct PeakFinder {
-  constexpr static int N = 5;
+  constexpr static int N = 3;
   float xbuf[N];
   double ybuf[N];
   int bufi = 0;
@@ -123,12 +123,14 @@ struct VoxelScore1 {
     const Camera& ci = cams.at(cam_i);
     const QImage& image_i = imgs.at(cam_i);
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
-    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
+    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 1.0f);
 
     sjdk.reserve(16);
     for (int i = 0; i < ccams.num; ++i) {
       find_peaks(i);
     }
+    std::sort(sjdk.begin(), sjdk.end(),
+              [](QPointF a, QPointF b){ return a.x() < b.x(); });
   }
 
   Epipolar make_epipolar(int ith_jcam) const
@@ -149,7 +151,7 @@ struct VoxelScore1 {
     auto epipolar = make_epipolar(ith_jcam);
 
     PeakFinder peak;
-    epipolar.per_pixel<0>(
+    epipolar.per_pixel<1>(
       [&peak,&image_j,this,&epipolar]
       (Vec3 pt0, Vec3 pt1) {
         // TODO : should consider voxel space....
@@ -166,10 +168,10 @@ struct VoxelScore1 {
 
   static inline double parzen_window(float x)
   {
-    //const double sigma = 1.0;
-    //double a = x / sigma;
-    //return exp(-0.5 * a * a);
-    return (fabsf(x) <= 1.0f ? 1.0 : 0.0);
+    const double sigma = 1.0;
+    double a = x / sigma;
+    return exp(-0.5 * a * a);
+    //return (fabsf(x) <= 1.0f ? 1.0 : 0.0);
   }
 
   inline double compute(float d) const
@@ -188,11 +190,15 @@ struct VoxelScore1 {
     if (ccams.num < 1)
       return 0.0;
 
-    float c0 = compute(0.0);
+    double c0 = compute(0.0);
     for (QPointF s : sjdk) {
       if (fabs(s.x()) <= 1.0)
         c0 = fmax(c0, compute(s.x()));
     }
+
+    // NOTE: thresholding to eliminate outliers
+    if (c0 < 0.7)
+      return 0.0;
 
     bool ok = true;
     for (QPointF s : sjdk) {
