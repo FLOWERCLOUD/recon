@@ -41,7 +41,7 @@ struct Epipolar {
   {
     Vec3 delta = copy_z(xy - Vec3::proj(ve), Vec3::zero());
     float len = (float)length(delta);
-    float dp = (float)dot(delta, Vec3::cast(vd));
+    float dp = (float)dot(delta, Vec3::proj(vd));
     float e_w = (float)ve.w();
     float d_w = (float)vd.w();
     float t = (e_w * len) / (d_k - d_w * len);
@@ -77,9 +77,10 @@ struct Epipolar {
         Vec3 p0 = Vec3(x0,y0, solve_depth(Vec3(x0,y0,0.0)));
         Vec3 p1 = Vec3(x1,y1, solve_depth(Vec3(x1,y1,0.0)));
         f(p0, p1);
+        //f(x0, y0, x1, y1);
       };
       //
-      if (RANGE_EXTENDED < 1) {
+      if (RANGE_EXTENDED < 0) {
         for (int x = 0, w = width; x < w; ++x)
           invoke((float)x, (float)(x+1));
       } else {
@@ -91,8 +92,12 @@ struct Epipolar {
         ex0 -= RANGE_EXTENDED;
         ex1 += RANGE_EXTENDED;
         //printf("ex %f %f\n", ex0, ex1);
-        for (int x = ex0; x <= ex1; ++x)
-          invoke((float)x, (float)(x+1));
+        for (int ix = ex0, ix2 = ex1; ix <= ix2; ++ix) {
+          float x = ix;
+          //invoke(x, x+0.5f);
+          //invoke(x+0.5f, x+1.0f);
+          invoke(x, x + 1.0f);
+        }
       }
     } else { // along Y
       float m = (dx / dy);
@@ -104,9 +109,10 @@ struct Epipolar {
         Vec3 p0 = Vec3(x0,y0, solve_depth(Vec3(x0,y0,0.0)));
         Vec3 p1 = Vec3(x1,y1, solve_depth(Vec3(x1,y1,0.0)));
         f(p0, p1);
+        //f(x0, y0, x1, y1);
       };
       //
-      if (RANGE_EXTENDED < 1) {
+      if (RANGE_EXTENDED < 0) {
         for (int y = 0, h = height; y < h; ++h)
           invoke((float)y, (float)(y+1));
       } else {
@@ -117,8 +123,12 @@ struct Epipolar {
         ey0 = floorf(ey0), ey1 = ceilf(ey1);
         ey0 -= RANGE_EXTENDED;
         ey1 += RANGE_EXTENDED;
-        for (int y = ey0; y <= ey1; ++y)
-          invoke((float)y, (float)(y+1));
+        for (int iy = ey0, iy2 = ey1; iy <= iy2; ++iy) {
+          float y = iy;
+          //invoke(y, xy0.5f);
+          //invoke(y+0.5f, y+1.0f);
+          invoke(y, y + 1.0f);
+        }
       }
     }
   }

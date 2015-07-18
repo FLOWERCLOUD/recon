@@ -32,8 +32,8 @@ struct ClosestCameras {
     txfm_i = m * ci.extrinsic();
 
     append_cameras(x, 0.9396926207859084f, 0.984807753012208f); // 10 - 20 deg
-    append_cameras(x, 0.984807753012208f, 0.9961946980917455f); // 5 - 10 deg
-    append_cameras(x, 0.9063077870366499f, 0.9396926207859084f); // 20 - 25 deg
+    //append_cameras(x, 0.984807753012208f, 0.9961946980917455f); // 5 - 10 deg
+    //append_cameras(x, 0.9063077870366499f, 0.9396926207859084f); // 20 - 25 deg
   }
 
   bool append_cameras(Point3 x, float cos_min, float cos_max)
@@ -125,7 +125,7 @@ struct VoxelScore1 {
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
     ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
 
-    sjdk.reserve(128);
+    sjdk.reserve(16);
     for (int i = 0; i < ccams.num; ++i) {
       find_peaks(i);
     }
@@ -149,7 +149,7 @@ struct VoxelScore1 {
     auto epipolar = make_epipolar(ith_jcam);
 
     PeakFinder peak;
-    epipolar.per_pixel<1>(
+    epipolar.per_pixel<0>(
       [&peak,&image_j,this,&epipolar]
       (Vec3 pt0, Vec3 pt1) {
         // TODO : should consider voxel space....
@@ -160,31 +160,23 @@ struct VoxelScore1 {
         if (peak.valid()) {
           sjdk.append(QPointF(peak.x(), peak.y()));
         }
-        /*depth = (float)(pt0.z() + pt1.z()) * 0.5f;
-        swj = SampleWindow(image_j, epipolar.lerp2D(depth));
-        ncc = NormalizedCrossCorrelation(swin_i, swj);
-        peak.push(depth, ncc);
-        if (peak.valid()) {
-          sjdk.append(QPointF(peak.x(), peak.y()));
-        }*/
       }
     , 3.0f);
   }
 
-  static inline double parzen_window(double x)
+  static inline double parzen_window(float x)
   {
     //const double sigma = 1.0;
     //double a = x / sigma;
     //return exp(-0.5 * a * a);
-    return (fabs(x) <= 1.0 ? 1.0 : 0.0);
+    return (fabsf(x) <= 1.0f ? 1.0 : 0.0);
   }
 
   inline double compute(float d) const
   {
     double sum = 0.0;
-
     for (QPointF ds : sjdk) {
-      double dk = ds.x();
+      float dk = ds.x();
       double sidk = ds.y();
       sum += sidk * parzen_window(d - dk);
     }
@@ -198,7 +190,7 @@ struct VoxelScore1 {
 
     float c0 = compute(0.0);
     for (QPointF s : sjdk) {
-      if (fabsf(s.x()) <= 1.0f)
+      if (fabs(s.x()) <= 1.0)
         c0 = fmax(c0, compute(s.x()));
     }
 

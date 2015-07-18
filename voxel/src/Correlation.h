@@ -25,8 +25,7 @@ struct SampleWindow {
   SampleWindow(const QImage& image, Vec3 xy)
   : SampleWindow()
   {
-    set_bilinear_rgb32(image, xy);
-    //set_bilinear(image, xy);
+    set_bilinear(image, xy);
     //set_floor(image, xy);
 
     // normalize pixel value to 0.0 - 1.0
@@ -111,45 +110,6 @@ struct SampleWindow {
     }
   }
 
-  inline void set_bilinear_rgb32(const QImage& image, Vec3 xy)
-  {
-    Q_ASSERT(image.format() == QImage::Format_RGB32);
-
-    int width = image.width(), height = image.height();
-
-    float ix, iy;
-    float fx = modff((float)xy.x(), &ix);
-    float fy = modff((float)xy.y(), &iy);
-
-    int px = (int)ix, py = (int)iy;
-
-    if (__builtin_expect(!(px >= 0 && py >= 0 && px < width && py < height), 0))
-      return;
-    valid = true;
-
-    for (int i = 0; i < 11; ++i) {
-      int y0 = py - 5 + i, y1 = py - 4 + i;
-      y0 = std::min(std::max(y0, 0), height-1);
-      y1 = std::min(std::max(y1, 0), height-1);
-      const QRgb* row0 = (const QRgb*)image.constScanLine(y0);
-      const QRgb* row1 = (const QRgb*)image.constScanLine(y1);
-
-      for (int j = 0; j < 11; ++j) {
-        int x0 = px - 5 + j, x1 = px - 4 + j;
-        x0 = std::min(std::max(x0, 0), width-1);
-        x1 = std::min(std::max(x1, 0), width-1);
-        QRgb c0 = row0[x0];
-        QRgb c1 = row0[x1];
-        QRgb c2 = row1[x0];
-        QRgb c3 = row1[x1];
-        Vec3 v0 = Vec3(qRed(c0), qGreen(c0), qBlue(c0));
-        Vec3 v1 = Vec3(qRed(c1), qGreen(c1), qBlue(c1));
-        Vec3 v2 = Vec3(qRed(c2), qGreen(c2), qBlue(c2));
-        Vec3 v3 = Vec3(qRed(c3), qGreen(c3), qBlue(c3));
-        color[i*11+j] = lerp(fy, lerp(fx, v0, v1), lerp(fx, v2, v3));
-      }
-    }
-  }
 };
 
 static const Mat3 RGB_TO_YUV = Mat3{

@@ -17,7 +17,7 @@ target_compile_options(recon-voxel
   PUBLIC
   -mssse3
   $<$<NOT:$<CONFIG:Debug>>:-Ofast>
-  $<$<CONFIG:Debug>:-Og -g>
+  $<$<CONFIG:Debug>:-g>
 )
 target_include_directories(recon-voxel
   PUBLIC
