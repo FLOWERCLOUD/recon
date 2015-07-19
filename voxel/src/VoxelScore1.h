@@ -67,7 +67,7 @@ struct ClosestCameras {
 };
 
 struct PeakFinder {
-  constexpr static int N = 3;
+  constexpr static int N = 5;
   float xbuf[N];
   double ybuf[N];
   int bufi = 0;
@@ -123,7 +123,7 @@ struct VoxelScore1 {
     const Camera& ci = cams.at(cam_i);
     const QImage& image_i = imgs.at(cam_i);
     swin_i = SampleWindow(image_i, Vec3::proj(transform(ccams.txfm_i, x)));
-    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 1.0f);
+    ray = Ray3(x, normalize(ci.center() - x) * voxel_h * 0.707f);
 
     sjdk.reserve(16);
     for (int i = 0; i < ccams.num; ++i) {
@@ -151,7 +151,7 @@ struct VoxelScore1 {
     auto epipolar = make_epipolar(ith_jcam);
 
     PeakFinder peak;
-    epipolar.per_pixel<1>(
+    epipolar.per_pixel<0>(
       [&peak,&image_j,this,&epipolar]
       (Vec3 pt0, Vec3 pt1) {
         // TODO : should consider voxel space....
@@ -168,10 +168,10 @@ struct VoxelScore1 {
 
   static inline double parzen_window(float x)
   {
-    const double sigma = 1.0;
-    double a = x / sigma;
-    return exp(-0.5 * a * a);
-    //return (fabsf(x) <= 1.0f ? 1.0 : 0.0);
+    //const double sigma = 1.0;
+    //double a = x / sigma;
+    //return exp(-0.5 * a * a);
+    return (fabsf(x) <= 1.0f ? 1.0 : 0.0);
   }
 
   inline double compute(float d) const
@@ -191,19 +191,35 @@ struct VoxelScore1 {
       return 0.0;
 
     double c0 = compute(0.0);
-    for (QPointF s : sjdk) {
-      if (fabs(s.x()) <= 1.0)
-        c0 = fmax(c0, compute(s.x()));
-    }
+    //for (QPointF s : sjdk) {
+    //  if (fabs(s.x()) <= 1.0)
+    //    c0 = fmax(c0, compute(s.x()));
+    //}
+    /*for (int i = 0; i < ccams.num; ++i) {
+      auto epipolar = make_epipolar(i);
+      epipolar.per_pixel<0>(
+        [&c0,this](Vec3 pt0, Vec3 pt1){
+          c0 = fmax(c0, compute((float)pt0.z()));
+        },
+      1.0f);
+    }*/
 
     // NOTE: thresholding to eliminate outliers
-    if (c0 < 0.7)
-      return 0.0;
+    //if (c0 < 0.7)
+    //  return 0.0;
 
     bool ok = true;
-    for (QPointF s : sjdk) {
-      ok = ok && (c0 >= compute(s.x()));
-    }
+    //for (QPointF s : sjdk) {
+    //  ok = ok && (c0 >= compute(s.x()));
+    //}
+    auto epipolar = make_epipolar(0);
+    epipolar.per_pixel<0>(
+      [c0,&ok,this](Vec3 pt0, Vec3 pt1){
+        float c = compute((float)pt0.z());
+        ok = ok && (c0 >= c);
+      },
+    3.0f);
+
     return (ok ? c0 : 0.0);
   }
 };

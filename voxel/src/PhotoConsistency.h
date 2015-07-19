@@ -22,8 +22,8 @@ struct PhotoConsistency {
       QImage img = QImage(cameras[i].imagePath());
       //if (img.width() > 640)
       //  img = img.scaledToWidth(640, Qt::SmoothTransformation);
-      if (img.width() > 960)
-        img = img.scaledToWidth(img.width()/2, Qt::SmoothTransformation);
+      //if (img.width() > 960)
+      //  img = img.scaledToWidth(img.width()/2, Qt::SmoothTransformation);
       images.append(img);
     }
   }
