@@ -56,8 +56,6 @@ struct Epipolar {
   template<bool GLOBAL = true, typename F>
   void per_pixel(F f, float drange = 1.0f) const
   {
-    //
-    const int RANGE_EXTENDED = 0;
     // end points
     Vec3 ep0 = lerp2D(-drange), ep1 = lerp2D(drange);
     float dx = (float)((ep1 - ep0).x());
@@ -87,8 +85,6 @@ struct Epipolar {
         if (ex0 > ex1)
           std::swap(ex0, ex1);
         ex0 = floorf(ex0), ex1 = ceilf(ex1);
-        ex0 -= RANGE_EXTENDED;
-        ex1 += RANGE_EXTENDED;
         //printf("ex %f %f\n", ex0, ex1);
         for (int ix = ex0, ix2 = ex1; ix <= ix2; ++ix) {
           float x = ix;
@@ -122,8 +118,6 @@ struct Epipolar {
         if (ey0 > ey1)
           std::swap(ey0, ey1);
         ey0 = floorf(ey0), ey1 = ceilf(ey1);
-        ey0 -= RANGE_EXTENDED;
-        ey1 += RANGE_EXTENDED;
         for (int iy = ey0, iy2 = ey1; iy <= iy2; ++iy) {
           float y = iy;
           invoke(y, y+0.5f);
