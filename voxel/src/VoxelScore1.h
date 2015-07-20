@@ -213,8 +213,8 @@ struct VoxelScore1 {
     }
 
     // NOTE: thresholding to eliminate outliers
-    //if (c0 < 0.7)
-    //  return 0.0;
+    if (c0 < 0.7)
+      return 0.0;
 
     bool ok = true;
     //for (QPointF s : sjdk) {

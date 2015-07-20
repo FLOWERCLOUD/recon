@@ -49,6 +49,8 @@ int main(int argc, char** argv)
   parser.addOption(optVoxelY);
   QCommandLineOption optCamI(QStringList() << "i" << "cam-i", "Camera I", "cam-i");
   parser.addOption(optCamI);
+  QCommandLineOption optUseXY("use-xy", "Use XY Plane");
+  parser.addOption(optUseXY);
 
   parser.process(app);
 
@@ -79,9 +81,16 @@ int main(int argc, char** argv)
   printf("Construct score image...\n");
   for (uint32_t i = 0, w = model.width; i < w; ++i) {
     for (uint32_t j = 0; j < w; ++j) {
-      Point3 pos = model.virtual_box.lerp(j/float(model.width),
-                                          voxel_y/(model.height),
-                                          i/float(model.depth));
+      Point3 pos;
+      if (parser.isSet(optUseXY)) {
+        pos = model.virtual_box.lerp(j/float(model.width),
+                                     i/float(model.height),
+                                     voxel_y/float(model.depth));
+      } else {
+        pos = model.virtual_box.lerp(j/float(model.width),
+                                     voxel_y/(model.height),
+                                     i/float(model.depth));
+      }
       printf("Computing... %.2f %%\n", float(i*w+j)/float(w*w)*100.0f);
       if (cam_i >= 0) {
         Score score(pcs.cameras, pcs.images, cam_i, pos, pcs.voxel_size);
@@ -113,9 +122,13 @@ int main(int argc, char** argv)
         stream << "]" << (i==w-1 ? "\n" : ",\n");
       }
       stream << "])\n"
-             << "plt.figure()\n"
-             << "plt.axis([0,data.shape[1],0,data.shape[0]])\n"
-             << "plt.imshow(data, interpolation='nearest', cmap='jet')\n"
+             << "plt.figure()\n";
+      if (parser.isSet(optUseXY)) {
+        stream << "plt.axis([0,data.shape[1],data.shape[0],0])\n";
+      } else {
+        stream << "plt.axis([0,data.shape[1],0,data.shape[0]])\n";
+      }
+      stream << "plt.imshow(data, interpolation='nearest', cmap='jet')\n"
              << "plt.colorbar()\n"
              << "plt.show()\n";
       stream.flush();

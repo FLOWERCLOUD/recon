@@ -78,6 +78,7 @@ struct Epipolar {
           float x = ix;
           invoke(x, x+0.5f);
           invoke(x+0.5f, x+1.0f);
+          //invoke(x, x + 1.0f);
         }
       } else {
         float ex0 = (float)ep0.x();
@@ -111,6 +112,7 @@ struct Epipolar {
           float y = iy;
           invoke(y, y+0.5f);
           invoke(y+0.5f, y+1.0f);
+          //invoke(y, y + 1.0f);
         }
       } else {
         float ey0 = (float)ep0.y();
