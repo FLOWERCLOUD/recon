@@ -151,7 +151,7 @@ struct VoxelScore1 {
     auto epipolar = make_epipolar(ith_jcam);
 
     PeakFinder peak;
-    epipolar.per_pixel<0>(
+    epipolar.per_pixel<false>(
       [&peak,&image_j,this,&epipolar]
       (Vec3 pt0, Vec3 pt1) {
         // TODO : should consider voxel space....
@@ -197,12 +197,20 @@ struct VoxelScore1 {
     //}
     /*for (int i = 0; i < ccams.num; ++i) {
       auto epipolar = make_epipolar(i);
-      epipolar.per_pixel<0>(
+      epipolar.per_pixel<false>(
         [&c0,this](Vec3 pt0, Vec3 pt1){
           c0 = fmax(c0, compute((float)pt0.z()));
         },
       1.0f);
     }*/
+    {
+      auto epipolar = make_epipolar(0);
+      epipolar.per_pixel<false>(
+        [&c0,this](Vec3 pt0, Vec3 pt1){
+          c0 = fmax(c0, compute((float)pt0.z()));
+        },
+      1.0f);
+    }
 
     // NOTE: thresholding to eliminate outliers
     //if (c0 < 0.7)
@@ -213,7 +221,7 @@ struct VoxelScore1 {
     //  ok = ok && (c0 >= compute(s.x()));
     //}
     auto epipolar = make_epipolar(0);
-    epipolar.per_pixel<0>(
+    epipolar.per_pixel<false>(
       [c0,&ok,this](Vec3 pt0, Vec3 pt1){
         float c = compute((float)pt0.z());
         ok = ok && (c0 >= c);

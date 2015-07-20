@@ -40,7 +40,8 @@ struct Epipolar {
   inline float solve_depth(Vec3 xy) const
   {
     Vec3 delta = copy_z(xy - Vec3::proj(ve), Vec3::zero());
-    float len = (float)length(delta);
+    //float len = (float)length(delta);
+    float len = sqrtf((float)dot(delta, delta));
     float dp = (float)dot(delta, Vec3::proj(vd));
     float e_w = (float)ve.w();
     float d_w = (float)vd.w();
@@ -49,20 +50,14 @@ struct Epipolar {
   }
 
   //
-  // RANGE_EXTENDED: = M
-  //       --------|-----------|-------->
-  //          M    |  |d| < 1  |   M
-  //              ex0         ex1
-  //
-  //  if M = -1 => through the whole image
-  //
-  //
   // F: void func(Vec3 pt0, Vec3 pt1)
   //    where pt0, pt1 are 2D points with z = depth
   //
-  template<int RANGE_EXTENDED = -1, typename F>
+  template<bool GLOBAL = true, typename F>
   void per_pixel(F f, float drange = 1.0f) const
   {
+    //
+    const int RANGE_EXTENDED = 0;
     // end points
     Vec3 ep0 = lerp2D(-drange), ep1 = lerp2D(drange);
     float dx = (float)((ep1 - ep0).x());
@@ -80,9 +75,12 @@ struct Epipolar {
         //f(x0, y0, x1, y1);
       };
       //
-      if (RANGE_EXTENDED < 0) {
-        for (int x = 0, w = width; x < w; ++x)
-          invoke((float)x, (float)(x+1));
+      if (GLOBAL) {
+        for (int ix = 0, w = width; ix < w; ++ix) {
+          float x = ix;
+          invoke(x, x+0.5f);
+          invoke(x+0.5f, x+1.0f);
+        }
       } else {
         float ex0 = (float)ep0.x();
         float ex1 = (float)ep1.x();
@@ -94,9 +92,9 @@ struct Epipolar {
         //printf("ex %f %f\n", ex0, ex1);
         for (int ix = ex0, ix2 = ex1; ix <= ix2; ++ix) {
           float x = ix;
-          //invoke(x, x+0.5f);
-          //invoke(x+0.5f, x+1.0f);
-          invoke(x, x + 1.0f);
+          invoke(x, x+0.5f);
+          invoke(x+0.5f, x+1.0f);
+          //invoke(x, x + 1.0f);
         }
       }
     } else { // along Y
@@ -112,9 +110,12 @@ struct Epipolar {
         //f(x0, y0, x1, y1);
       };
       //
-      if (RANGE_EXTENDED < 0) {
-        for (int y = 0, h = height; y < h; ++h)
-          invoke((float)y, (float)(y+1));
+      if (GLOBAL) {
+        for (int iy = 0, h = height; iy < h; ++iy) {
+          float y = iy;
+          invoke(y, y+0.5f);
+          invoke(y+0.5f, y+1.0f);
+        }
       } else {
         float ey0 = (float)ep0.y();
         float ey1 = (float)ep1.y();
@@ -125,9 +126,9 @@ struct Epipolar {
         ey1 += RANGE_EXTENDED;
         for (int iy = ey0, iy2 = ey1; iy <= iy2; ++iy) {
           float y = iy;
-          //invoke(y, xy0.5f);
-          //invoke(y+0.5f, y+1.0f);
-          invoke(y, y + 1.0f);
+          invoke(y, y+0.5f);
+          invoke(y+0.5f, y+1.0f);
+          //invoke(y, y + 1.0f);
         }
       }
     }
