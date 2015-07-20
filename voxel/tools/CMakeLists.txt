@@ -27,6 +27,13 @@ if(OpenCV_FOUND)
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/recon
   )
 
+  add_executable(vote_test vote_test.cpp)
+  target_link_libraries(vote_test recon-voxel)
+  target_include_directories(vote_test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/recon
+  )
+
   add_executable(vote_vis vote_vis.cpp)
   target_link_libraries(vote_vis recon-voxel ${OpenCV_LIBS})
   target_include_directories(vote_vis
