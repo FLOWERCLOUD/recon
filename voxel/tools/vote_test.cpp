@@ -92,7 +92,7 @@ int main(int argc, char** argv)
              << "data = np.array([\n";
       for (int i = 0; i < cameras.size(); ++i) {
         stream << "[" << i << ", float(\""
-               << Score(pcs.cameras, pcs.images, i, voxel_pos, pcs.voxel_size).compute(0.0f)
+               << Score(pcs.cameras, pcs.images, i, voxel_pos, pcs.voxel_size).vote()
                << "\")],\n";
       }
       stream << "])\n"
