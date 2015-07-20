@@ -160,6 +160,7 @@ struct VoxelScore1 {
         float ncc = NormalizedCrossCorrelation(swin_i, swj);
         peak.push(depth, ncc);
         if (peak.valid()) {
+          //if (peak.y() > 0.5f)
           sjdk.append(QPointF(peak.x(), peak.y()));
         }
       }
@@ -213,8 +214,8 @@ struct VoxelScore1 {
     }
 
     // NOTE: thresholding to eliminate outliers
-    if (c0 < 0.7)
-      return 0.0;
+    //if (c0 < 0.5)
+    //  return 0.0;
 
     bool ok = true;
     //for (QPointF s : sjdk) {
