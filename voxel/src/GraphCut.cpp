@@ -37,7 +37,7 @@ VoxelList graph_cut(const VoxelGraph& vgraph, double lambda, double mju)
     if (vgraph.foreground[m]) {
       graph.set_terminal_cap(node, wb, 0.0);
     } else {
-      graph.set_terminal_cap(node, wb, INFINITY);
+      graph.set_terminal_cap(node, 0.0, INFINITY);
     }
   }
 
