@@ -184,8 +184,13 @@ bool save_raw(const VoxelModel& model, const VoxelList& vlist, const QString& pa
   size_t size = model.width * model.height * model.depth;
   QByteArray data = QByteArray(size, 0);
 
-  for (uint64_t m : vlist)
-    data[(uint)m] = 255;
+  for (uint64_t m : vlist) {
+    uint32_t x, y, z;
+    uint index;
+    morton_decode(m, x, y, z);
+    index = x + y * model.width + z * model.width * model.height;
+    data[index] = 255;
+  }
 
   QFile file(path);
   if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {

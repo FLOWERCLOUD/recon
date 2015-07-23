@@ -9,8 +9,8 @@ target_link_libraries(optimize-graph recon-voxel)
 add_executable(vishull vishull.cpp)
 target_link_libraries(vishull recon-voxel)
 
-add_executable(repair-voxel repair.cpp)
-target_link_libraries(repair-voxel recon-voxel)
+add_executable(skeleton skeleton.cpp)
+target_link_libraries(skeleton recon-voxel)
 
 find_package(OpenCV 2.4)
 if(OpenCV_FOUND)
