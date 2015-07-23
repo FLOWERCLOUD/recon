@@ -1,0 +1,26 @@
+TO DO list:
+~~~~~~~~~~~
+* pfSkel
+   - pad volume with 2 layers always and then check that every segment is inside the original volume. If not, remove the segment. Another solution: reconect the skeleton if disconnected (to closest piece ?)
+ 
+
+* all - make sure all fopen is using b when necessary
+      - do not use argv[] in the code to reference parameters - use other pointers initialized right at the begining of main instead.
+      - print program parameters at the begining
+      - spell check all files
+      - remove exit from all functions - return false and always CHECK the return value before continuing
+
+* common  - ReadVectorField() allocate the array inside the function
+            ComputerPotentialField() allocate the field array inside the function
+* potField: - use the flags when taking boundary points.
+            - no upper bound on the boundary array
+            - no more sorting
+            - half of boundary points as parameter
+
+*Debug options group:
+  - output field file, critical points, high div points, hich curvature points, ....
+
+* New optional parameters: 
+    - all #defines from the files         
+    
+* User and programmer manual

@@ -30,6 +30,8 @@ int main(int argc, char* argv[])
   QCommandLineOption optMju(QStringList() << "m" << "mju", "Mju", "mju");
   optMju.setDefaultValue("2.0");
   parser.addOption(optMju);
+  QCommandLineOption optSkel(QStringList() << "s" << "skeleton", "Skeleton File", "skeleton");
+  parser.addOption(optSkel);
 
   parser.process(app);
 
@@ -47,16 +49,28 @@ int main(int argc, char* argv[])
   using recon::VoxelGraph;
   using recon::VoxelModel;
   using recon::VoxelList;
+  using recon::SkeletonField;
 
   VoxelGraph graph;
   if (!recon::load_graph(graph, graphPath)) {
     return 1;
   }
+  qDebug() << "graph is loaded";
 
   double lambda = parser.value(optLambda).toDouble();
   double mju = parser.value(optMju).toDouble();
 
-  VoxelList vlist = graph_cut(graph, lambda, mju);
+  SkeletonField field(graph.level);
+  if (parser.isSet(optSkel)) {
+    if (!field.load(parser.value(optSkel)))
+      return 1;
+    qDebug() << "Skeleton: " << field.skeleton.size() << " skeleton points";
+    field.computeField();
+  }
+  qDebug() << "start to graph cut...";
+
+  VoxelList vlist = graph_cut(graph, field, lambda, mju);
+
   VoxelModel model(graph.level, AABox(Point3::load(graph.voxel_minpos),
                                       Point3::load(graph.voxel_maxpos)));
   recon::save_points_ply(outputPath, model, vlist);

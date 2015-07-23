@@ -1,0 +1,4 @@
+pfSkel version 1.3
+
+# !!!!!!
+# don't forget to change the version number in driver.cpp too 

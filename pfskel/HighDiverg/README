@@ -1,0 +1,10 @@
+Detecting high divergence points.
+---------------------------------
+
+HighDiverg - returns points where the divergence of the vector field is above
+   a certain threshold (computed as a percentage of the maximum divergence 
+   value over the entire field).
+
+localMaxDiv - finds the points where the divergence of the vector field is a
+   local maximum (compared to it's 26 neighbors (neighbors where force = 0 are
+   ignored)). 

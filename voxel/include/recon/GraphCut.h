@@ -26,9 +26,11 @@
 */
 
 #include "BuildGraph.h"
+#include "Skeleton.h"
 
 namespace recon {
 
-VoxelList graph_cut(const VoxelGraph& graph, double lambda, double mju);
+VoxelList graph_cut(const VoxelGraph& graph, const SkeletonField& field,
+                    double lambda, double mju);
 
 }

@@ -1,0 +1,5 @@
+COMPILER = g++
+COMPILE_OPTIONS	= -D_DEBUG -g -Wall
+COMPILE = -c
+OUTPUT = -o
+EXECOUTPUT = -o

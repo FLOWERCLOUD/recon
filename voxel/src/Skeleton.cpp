@@ -9,12 +9,32 @@ namespace recon {
 SkeletonField::SkeletonField(int lv)
 : level(lv)
 , skeleton()
-, field((1 << (lv*3)), 0.0f)
+, field((0x1ull << (lv*3)), 0.0f)
 {
 }
 
 void SkeletonField::computeField()
 {
+  uint64_t n = 0x1ull << (level * 3);
+  float w = float(0x1 << level);
+
+  for (uint64_t m = 0; m < n; ++m) {
+    uint32_t x, y, z;
+    morton_decode(m, x, y, z);
+
+    float min_dist = INFINITY;
+    for (uint64_t m0 : skeleton) {
+      uint32_t x0, y0, z0;
+      morton_decode(m0, x0, y0, z0);
+
+      float dx = ((float)x - (float)x0) / w;
+      float dy = ((float)y - (float)y0) / w;
+      float dz = ((float)z - (float)z0) / w;
+      float d = sqrtf(dx * dx + dy * dy + dz * dz);
+      min_dist = fminf(min_dist, d);
+    }
+    field[(uint)m] = min_dist;
+  }
 }
 
 bool SkeletonField::load(const QString& path)

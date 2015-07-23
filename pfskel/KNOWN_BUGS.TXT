@@ -1,0 +1,7 @@
+Known bugs
+----------
+* When loading a vector file from disk, it is the exclusive responsability of 
+the user to make sure that the file being loaded was saved using the same 
+input parameters as the current run. I am refering to distCharges, because 
+fieldStrength is ignored in that case..
+ - adding a small header to the output files may solve the problem
