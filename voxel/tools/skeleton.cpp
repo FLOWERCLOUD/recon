@@ -1,4 +1,5 @@
 #include <recon/VoxelModel.h>
+#include <recon/Skeleton.h>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
@@ -8,10 +9,6 @@
 #include <QTextStream>
 #include <stdlib.h>
 #include <iostream>
-
-struct VoxelData {
-  int disjoint;
-};
 
 int main(int argc, char* argv[])
 {
@@ -42,35 +39,21 @@ int main(int argc, char* argv[])
   using recon::AABox;
   using recon::VoxelModel;
   using recon::VoxelList;
+  using recon::SkeletonField;
 
   int level = parser.value(optSkelLevel).toInt();
   VoxelModel model(level, AABox(Point3::zero(), Point3(1.0f, 1.0f, 1.0f)));
   VoxelList vlist;
 
-  QFile file(inputPath);
-  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    qDebug() << "Cannot open input file!";
+  SkeletonField skel(level);
+  if (!skel.load(inputPath))
     return 1;
-  }
 
-  QTextStream stream(&file);
-  while (!stream.atEnd()) {
-    QString line = stream.readLine();
-    if (line.length() == 0)
-      continue;
-    else if (line.startsWith("#")) // comment
-      continue;
-
-    float spx, spy, spz, dt;
-    int sps;
-    QTextStream(&line) >> spx >> spy >> spz >> sps >> dt;
-
-    uint32_t x, y, z;
-    x = roundf(spx);
-    y = roundf(spy);
-    z = roundf(spz);
-    vlist.append(recon::morton_encode(x,y,z));
-  }
+  //for (uint64_t m = 0; m < model.morton_length; ++m) {
+  //  if (skel.skeleton[(uint)m])
+  //    vlist.append(m);
+  //}
+  vlist = skel.skeleton;
 
   recon::save_cubes_ply(outputPath, model, vlist);
 
