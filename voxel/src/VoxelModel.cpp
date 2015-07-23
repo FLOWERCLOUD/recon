@@ -179,4 +179,22 @@ void save_points_ply(const QString& path, const VoxelModel& model, const VoxelLi
   mesh.write(path.toUtf8().constData());
 }
 
+bool save_raw(const VoxelModel& model, const VoxelList& vlist, const QString& path)
+{
+  size_t size = model.width * model.height * model.depth;
+  QByteArray data = QByteArray(size, 0);
+
+  for (uint64_t m : vlist)
+    data[(uint)m] = 255;
+
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    qDebug() << "Cannot open output file: " << path;
+    return false;
+  }
+  file.write(data);
+  file.close();
+  return true;
+}
+
 }

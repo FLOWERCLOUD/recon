@@ -39,6 +39,8 @@ bool save_voxels(const VoxelModel& model, const VoxelList& vlist, const QString&
 void save_cubes_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist);
 void save_points_ply(const QString& path, const VoxelModel& model, const VoxelList& vlist);
 
+bool save_raw(const VoxelModel& model, const VoxelList& vlist, const QString& path);
+
 inline AABox VoxelModel::element_box(uint64_t morton) const
 {
   Q_ASSERT(morton < morton_length);

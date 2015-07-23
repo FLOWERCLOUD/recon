@@ -60,6 +60,8 @@ int main(int argc, char* argv[])
   parser.addOption(optLevel);
   QCommandLineOption optExportCubes("cubes", "Export Voxel Cubes");
   parser.addOption(optExportCubes);
+  QCommandLineOption optExportRaw("raw", "Export raw volumetric image");
+  parser.addOption(optExportRaw);
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();
@@ -94,14 +96,14 @@ int main(int argc, char* argv[])
 
   recon::VoxelModel model(level, loader.model_boundingbox());
   recon::VoxelList vlist = recon::visual_hull(model, cameras);
-  vlist = trim_voxels(model, vlist);
-
-  //recon::VoxelModel model2(level, recon::AABox(recon::Point3::zero(), recon::Point3(1.0,1.0,1.0)));
-  if (parser.isSet(optExportCubes)) {
-    recon::save_cubes_ply(outputPath, model, vlist);
+  if (parser.isSet(optExportRaw)) {
+    recon::save_raw(model, vlist, outputPath);
   } else {
-    recon::save_points_ply(outputPath, model, vlist);
+    vlist = trim_voxels(model, vlist);
+    if (parser.isSet(optExportCubes))
+      recon::save_cubes_ply(outputPath, model, vlist);
+    else
+      recon::save_points_ply(outputPath, model, vlist);
   }
-
   return 0;
 }
