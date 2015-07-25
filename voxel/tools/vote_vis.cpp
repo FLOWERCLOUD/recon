@@ -51,6 +51,9 @@ int main(int argc, char** argv)
   parser.addOption(optCamI);
   QCommandLineOption optUseXY("use-xy", "Use XY Plane");
   parser.addOption(optUseXY);
+  QCommandLineOption optThreshold(QStringList() << "t" << "threshold", "Threshold of Voting", "threshold");
+  optThreshold.setDefaultValue("0.5");
+  parser.addOption(optThreshold);
 
   parser.process(app);
 
@@ -71,9 +74,11 @@ int main(int argc, char** argv)
   float voxel_y = parser.value(optVoxelY).toFloat();
   int cam_i = (parser.isSet(optCamI) ? parser.value(optCamI).toInt() : -1);
 
+  recon::PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
+
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
-  recon::PhotoConsistency<Score> pcs(model, cameras);
+  recon::PhotoConsistency pcs(model, cameras);
 
   // Create Score Image
   cv::Mat canvas = cv::Mat::zeros(model.width, model.width, CV_32FC1);

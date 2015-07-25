@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
-  recon::PhotoConsistency<Score> pcs(model, cameras);
+  recon::PhotoConsistency pcs(model, cameras);
 
   // Transform Points
   //float voxel_h = (float)model.virtual_box.extent().x() / model.width;

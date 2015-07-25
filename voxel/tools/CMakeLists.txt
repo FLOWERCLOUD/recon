@@ -2,6 +2,10 @@ project(recon-voxel-tools)
 
 add_executable(build-graph build-graph.cpp)
 target_link_libraries(build-graph recon-voxel)
+target_include_directories(build-graph
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include/recon
+)
 
 add_executable(optimize-graph optimize.cpp)
 target_link_libraries(optimize-graph recon-voxel)

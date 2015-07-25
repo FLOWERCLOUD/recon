@@ -15,7 +15,7 @@ ClosestCameras::ClosestCameras(const QList<Camera>& cams, const QList<QImage>& i
 
   append_cameras(x, 0.9396926207859084f, 0.984807753012208f); // 10 - 20 deg
   //append_cameras(x, 0.984807753012208f, 0.9961946980917455f); // 5 - 10 deg
-  //append_cameras(x, 0.9063077870366499f, 0.9396926207859084f); // 20 - 25 deg
+  append_cameras(x, 0.9063077870366499f, 0.9396926207859084f); // 20 - 25 deg
 }
 
 bool ClosestCameras::append_cameras(Point3 x, float cos_min, float cos_max)
@@ -175,10 +175,6 @@ double VoxelScore1::vote() const
       },
     1.0f);
   }
-
-  // NOTE: thresholding to eliminate outliers
-  if (c0 < 0.5)
-    return 0.0;
 
   bool ok = true;
   for (int i = 0; i < ccams.num && ok; ++i) {

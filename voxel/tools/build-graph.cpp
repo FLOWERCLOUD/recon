@@ -1,5 +1,6 @@
 #include <recon/CameraLoader.h>
 #include <recon/BuildGraph.h>
+#include "../src/PhotoConsistency.h"
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
@@ -26,6 +27,11 @@ int main(int argc, char* argv[])
   QCommandLineOption optLevel(QStringList() << "l" << "level", "Level", "level");
   optLevel.setDefaultValue("7");
   parser.addOption(optLevel);
+
+  QCommandLineOption optThreshold(QStringList() << "t" << "threshold", "Threshold of Voting", "threshold");
+  optThreshold.setDefaultValue("0.5");
+  parser.addOption(optThreshold);
+
   parser.process(app);
 
   const QStringList args = parser.positionalArguments();
@@ -57,6 +63,8 @@ int main(int argc, char* argv[])
 
   int level = parser.value(optLevel).toInt();
   printf("level = %d\n", level);
+
+  recon::PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
 
   recon::VoxelModel model(level, loader.model_boundingbox());
   recon::VoxelGraph graph;
