@@ -23,6 +23,7 @@ using recon::AABox;
 using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
+using recon::PhotoConsistency;
 using Score = recon::VoxelScore1;
 
 int main(int argc, char** argv)
@@ -46,6 +47,10 @@ int main(int argc, char** argv)
   parser.addOption(optVoxelY);
   QCommandLineOption optVoxelZ(QStringList() << "z" << "voxel-z", "Voxel Z", "voxel-z");
   parser.addOption(optVoxelZ);
+  QCommandLineOption optThreshold(QStringList() << "t" << "threshold", "Threshold of Voting", "threshold");
+  parser.addOption(optThreshold);
+  QCommandLineOption optDisableAutoThreshold("no-auto-threshold", "Disable Automatic Thresholding");
+  parser.addOption(optDisableAutoThreshold);
 
   parser.process(app);
 
@@ -67,9 +72,13 @@ int main(int argc, char** argv)
   float voxel_y = parser.value(optVoxelY).toFloat();
   float voxel_z = parser.value(optVoxelZ).toFloat();
 
+  PhotoConsistency::EnableAutoThresholding = !parser.isSet(optDisableAutoThreshold);
+  if (parser.isSet(optThreshold))
+    PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
+
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
-  recon::PhotoConsistency pcs(model, cameras);
+  PhotoConsistency pcs(model, cameras);
 
   // Transform Points
   //float voxel_h = (float)model.virtual_box.extent().x() / model.width;

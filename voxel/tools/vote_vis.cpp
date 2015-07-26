@@ -28,6 +28,7 @@ using recon::AABox;
 using recon::Camera;
 using recon::CameraLoader;
 using recon::VoxelModel;
+using recon::PhotoConsistency;
 using Score = recon::VoxelScore1;
 
 int main(int argc, char** argv)
@@ -52,8 +53,9 @@ int main(int argc, char** argv)
   QCommandLineOption optUseXY("use-xy", "Use XY Plane");
   parser.addOption(optUseXY);
   QCommandLineOption optThreshold(QStringList() << "t" << "threshold", "Threshold of Voting", "threshold");
-  optThreshold.setDefaultValue("0.5");
   parser.addOption(optThreshold);
+  QCommandLineOption optDisableAutoThreshold("no-auto-threshold", "Disable Automatic Thresholding");
+  parser.addOption(optDisableAutoThreshold);
 
   parser.process(app);
 
@@ -74,11 +76,13 @@ int main(int argc, char** argv)
   float voxel_y = parser.value(optVoxelY).toFloat();
   int cam_i = (parser.isSet(optCamI) ? parser.value(optCamI).toInt() : -1);
 
-  recon::PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
+  PhotoConsistency::EnableAutoThresholding = !parser.isSet(optDisableAutoThreshold);
+  if (parser.isSet(optThreshold))
+    PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
 
   QList<Camera> cameras = loader.cameras();
   VoxelModel model(level, loader.model_boundingbox());
-  recon::PhotoConsistency pcs(model, cameras);
+  PhotoConsistency pcs(model, cameras);
 
   // Create Score Image
   cv::Mat canvas = cv::Mat::zeros(model.width, model.width, CV_32FC1);

@@ -16,6 +16,7 @@ struct PhotoConsistency {
   PhotoConsistency(const VoxelModel& model, const QList<Camera>& cams);
   double vote(Point3 x) const;
 
+  static bool EnableAutoThresholding;
   static double VotingThreshold;
 };
 

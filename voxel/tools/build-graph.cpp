@@ -29,8 +29,9 @@ int main(int argc, char* argv[])
   parser.addOption(optLevel);
 
   QCommandLineOption optThreshold(QStringList() << "t" << "threshold", "Threshold of Voting", "threshold");
-  optThreshold.setDefaultValue("0.5");
   parser.addOption(optThreshold);
+  QCommandLineOption optDisableAutoThreshold("no-auto-threshold", "Disable Automatic Thresholding");
+  parser.addOption(optDisableAutoThreshold);
 
   parser.process(app);
 
@@ -64,7 +65,10 @@ int main(int argc, char* argv[])
   int level = parser.value(optLevel).toInt();
   printf("level = %d\n", level);
 
-  recon::PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
+  using recon::PhotoConsistency;
+  PhotoConsistency::EnableAutoThresholding = !parser.isSet(optDisableAutoThreshold);
+  if (parser.isSet(optThreshold))
+    PhotoConsistency::VotingThreshold = parser.value(optThreshold).toDouble();
 
   recon::VoxelModel model(level, loader.model_boundingbox());
   recon::VoxelGraph graph;

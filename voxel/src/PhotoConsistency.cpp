@@ -15,14 +15,16 @@ PhotoConsistency(const VoxelModel& model, const QList<Camera>& cams)
     QImage img = QImage(cameras[i].imagePath());
     //if (img.width() > 640)
     //  img = img.scaledToWidth(640, Qt::SmoothTransformation);
-    while (img.width() > 960)
+    if (img.width() > 960)
       img = img.scaledToWidth(img.width()/2, Qt::SmoothTransformation);
     images.append(img);
   }
 }
 
-static double otsu_threshold(QList<double>& votes)
+static double otsu_threshold(const QList<double>& _votes)
 {
+  // copy
+  QList<double> votes = _votes;
   // sort votes
   std::sort(votes.begin(), votes.end());
   // convert to integral votes
@@ -62,10 +64,13 @@ double PhotoConsistency::vote(Point3 x) const
     VoxelScore1 score(cameras, images, i, x, voxel_size);
     votes.append(score.vote());
   }
-  double threshold = otsu_threshold(votes);
-  //double threshold = VotingThreshold;
-  if (threshold < VotingThreshold)
-    return 0.0;
+  double threshold = 0.0;
+  if (EnableAutoThresholding) {
+    threshold = otsu_threshold(votes);
+    threshold = fmax(threshold, VotingThreshold);
+  } else {
+    threshold = VotingThreshold;
+  }
 
   double sum = 0.0;
   for (int i = 0, n = votes.size(); i < n; ++i) {
@@ -77,6 +82,7 @@ double PhotoConsistency::vote(Point3 x) const
   return sum;
 }
 
-double PhotoConsistency::VotingThreshold = 0.5;
+bool PhotoConsistency::EnableAutoThresholding = true;
+double PhotoConsistency::VotingThreshold = 0.0;
 
 }

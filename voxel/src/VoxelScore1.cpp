@@ -189,9 +189,6 @@ double VoxelScore1::vote() const
     3.0f);
   }
 
-  // NOTE: Normalize vote
-  //c0 = c0 / ccams.num;
-
   return (ok ? c0 : 0.0);
 }
 
