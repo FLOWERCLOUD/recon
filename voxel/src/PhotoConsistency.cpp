@@ -1,5 +1,7 @@
 #include "VoxelScore1.h"
 #include "PhotoConsistency.h"
+#include <algorithm>
+#include <math.h>
 
 namespace recon {
 
@@ -13,21 +15,63 @@ PhotoConsistency(const VoxelModel& model, const QList<Camera>& cams)
     QImage img = QImage(cameras[i].imagePath());
     //if (img.width() > 640)
     //  img = img.scaledToWidth(640, Qt::SmoothTransformation);
-    if (img.width() > 960)
+    while (img.width() > 960)
       img = img.scaledToWidth(img.width()/2, Qt::SmoothTransformation);
     images.append(img);
   }
 }
 
+static double otsu_threshold(QList<double>& votes)
+{
+  // sort votes
+  std::sort(votes.begin(), votes.end());
+  // convert to integral votes
+  for (int i = 0, n = votes.size(); i < n; ++i)
+    votes[i] = votes.at(i) / (double)n;
+  for (int i = 1, n = votes.size(); i < n; ++i)
+    votes[i] = votes.at(i-1) + votes.at(i);
+  // Otsu Method
+  // find argmax{ inter-class variance }
+  double answer_t = 0.0;
+  double max_var = 0.0;
+  for (int i = 1, n = votes.size(); i < n; ++i) {
+    // split into { 0 ... i-1 }, { i ... n-1 }
+    // compute weights of two classes
+    double w1 = (double)i / (double)n;
+    double w2 = 1.0 - w1;
+    // compute means of two classes
+    double u1 = votes.at(i-1) / w1;
+    double u2 = (votes.at(n-1) - votes.at(i-1)) / w2;
+    double ud = u1 - u2;
+    // compute inter-class variance
+    double sb = w1 * w2 * ud * ud;
+    // check if maxima
+    if (max_var < sb) {
+      answer_t = (votes.at(i) + votes.at(i-1)) * 0.5;
+      max_var = sb;
+    }
+  }
+  return answer_t;
+}
+
 double PhotoConsistency::vote(Point3 x) const
 {
-  double sum = 0.0;
+  QList<double> votes;
+  votes.reserve(cameras.size());
   for (int i = 0, n = cameras.size(); i < n; ++i) {
     VoxelScore1 score(cameras, images, i, x, voxel_size);
+    votes.append(score.vote());
+  }
+  double threshold = otsu_threshold(votes);
+  //double threshold = VotingThreshold;
+  if (threshold < VotingThreshold)
+    return 0.0;
 
-    // NOTE: thresholding to eliminate outliers
-    double v = score.vote();
-    sum += (v >= VotingThreshold ? v : 0.0);
+  double sum = 0.0;
+  for (int i = 0, n = votes.size(); i < n; ++i) {
+    double v = votes.at(i);
+    //sum += v;
+    sum += (v >= threshold ? v : 0.0);
     //sum = fmax(sum, v);
   }
   return sum;

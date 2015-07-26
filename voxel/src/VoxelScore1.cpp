@@ -129,14 +129,14 @@ void VoxelScore1::find_peaks(int ith_jcam)
   epipolar.per_pixel<false>(
     [&peak,&image_j,this,&epipolar]
     (Vec3 pt0, Vec3 pt1) {
-      // TODO : should consider voxel space....
       float depth = (float)pt0.z();
       SampleWindow swj(image_j, pt0);
       float ncc = NormalizedCrossCorrelation(swin_i, swj);
       peak.push(depth, ncc);
       if (peak.valid()) {
-        //if (peak.y() > 0.5f)
-        sjdk.append(QPointF(peak.x(), peak.y()));
+        // NOTE: Hard threshold for peaks
+        if (peak.y() > 0.5f)
+          sjdk.append(QPointF(peak.x(), peak.y()));
       }
     }
   , 3.0f);
@@ -171,7 +171,9 @@ double VoxelScore1::vote() const
     auto epipolar = make_epipolar(i);
     epipolar.per_pixel<false>(
       [&c0,this](Vec3 pt0, Vec3 pt1){
-        c0 = fmax(c0, compute((float)pt0.z()));
+        float d = (float)pt0.z();
+        if (fabsf(d) <= 1.0f)
+          c0 = fmax(c0, compute(d));
       },
     1.0f);
   }
@@ -186,6 +188,9 @@ double VoxelScore1::vote() const
       },
     3.0f);
   }
+
+  // NOTE: Normalize vote
+  //c0 = c0 / ccams.num;
 
   return (ok ? c0 : 0.0);
 }
