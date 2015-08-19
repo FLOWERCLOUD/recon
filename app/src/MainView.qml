@@ -31,7 +31,7 @@ Item {
 
     ChooseImagePage {
       onDone: {
-        console.log("image paths = " + imagePaths);
+        //console.log("image paths = " + imagePaths);
         root.state = "PROCESS_SFM";
       }
     }

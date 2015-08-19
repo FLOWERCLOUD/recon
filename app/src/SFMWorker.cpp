@@ -6,6 +6,18 @@ namespace reconapp {
 SFMWorker::SFMWorker(QObject* parent)
 : QObject(parent)
 {
+  m_Proc.setProgram("VisualSFM");
+
+  QStringList args;
+  args << "sfm+shared"
+       << "images"
+       << "sparse.nvm";
+  m_Proc.setArguments(args);
+
+  connect(&m_Proc, SIGNAL(finished(int, QProcess::ExitStatus)),
+          this, SLOT(onFinished()));
+
+  m_Proc.setProcessChannelMode(QProcess::MergedChannels);
 }
 
 SFMWorker::~SFMWorker()
@@ -34,8 +46,18 @@ void SFMWorker::setImagePaths(const QStringList& imagePaths)
 
 void SFMWorker::start()
 {
+  if (m_Proc.state() != QProcess::NotRunning)
+    return;
+
   QDir rootDir(m_RootPath);
-  // TODO
+
+  m_Proc.setWorkingDirectory(rootDir.absolutePath());
+  m_Proc.start();
+}
+
+void SFMWorker::onFinished()
+{
+
 }
 
 }

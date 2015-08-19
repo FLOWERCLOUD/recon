@@ -7,7 +7,7 @@
 
 namespace reconapp {
 
-class SFMWorker : public QObject { // QProcess?
+class SFMWorker : public QObject {
   Q_OBJECT
 public:
   SFMWorker(QObject* parent = 0);
@@ -21,12 +21,13 @@ public:
 
   void start();
 
-signals:
-  void finish();
+private slots:
+  void onFinished();
 
 private:
   QString m_RootPath;
   QStringList m_ImagePaths;
+  QProcess m_Proc;
 };
 
 }
