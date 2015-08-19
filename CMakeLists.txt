@@ -8,4 +8,4 @@ add_subdirectory(gfxmath/vectormath)
 add_subdirectory(voxel)
 
 #add_subdirectory(visualsfm)
-add_subdirectory(app)
+#add_subdirectory(app)
